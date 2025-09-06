@@ -1,0 +1,2639 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLUSTRO 통합 버전 - 네비게이션 연동 (Final v13.0)</title>
+
+<!-- 🔒 SECURITY HEADERS - 민감 정보 노출 및 XSS 방지 -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self'; 
+  script-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.gstatic.com https://api.vworld.kr;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
+  font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
+  img-src 'self' data: blob: https: http:;
+  connect-src 'self' https: http:;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self';
+">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-XSS-Protection" content="1; mode=block">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+<style>
+/**
+ * 🎨 DESIGN SYSTEM - 일관된 코딩 스타일과 반응형 디자인
+ * 모든 CSS 변수와 클래스는 체계적으로 정리됨
+ */
+:root {
+  /* 🎨 Color System - 접근성을 고려한 색상 대비 */
+  --c-primary: #1F3A8A;
+  --c-sky: #0EA5E9;
+  --c-accent: #EA580C;
+  --c-util: #334155;
+  --c-success: #059669;
+  --c-warning: #D97706;
+  --c-danger: #DC2626;
+  
+  /* 📏 Layout System */
+  --rail-w: 64px;
+  --side-w: 380px;
+  --gut-w: 6px;
+  
+  /* 📝 Typography System */
+  --flt-font: 14px;
+  --tbl-font: 14px;
+  --font-family: 300 "Roboto", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  
+  /* 🗺️ Map System */
+  --mk: 30px;
+  
+  /* 🎯 Animation System */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+
+/* 📱 RESPONSIVE DESIGN - 다양한 화면 크기 지원 */
+@media (max-width: 768px) {
+  :root {
+    --rail-w: 48px;
+    --side-w: 280px;
+    --flt-font: 12px;
+    --tbl-font: 12px;
+  }
+  
+  #app {
+    grid-template-columns: var(--rail-w) 1fr;
+    grid-template-areas: "rail toolbar" "rail main";
+  }
+  
+  #lhs {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    width: var(--side-w);
+    height: 100vh;
+    z-index: 9999;
+    transition: left var(--transition-normal);
+  }
+  
+  #lhs.mobile-open {
+    left: var(--rail-w);
+  }
+  
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9998;
+    display: none;
+  }
+  
+  .mobile-overlay.show {
+    display: block;
+  }
+  
+  /* 선택목록 패널 모바일 최적화 */
+  #selPanel {
+    right: 12px !important;
+    bottom: 70px !important;
+    min-width: 280px !important;
+    max-width: calc(100vw - 24px) !important;
+    min-height: 180px !important;
+    max-height: calc(100vh - 140px) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+  }
+  
+  #mapControlsTop {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+    padding: 8px !important;
+  }
+  
+  #mapControlsTop .btn {
+    flex: 1 1 auto !important;
+    min-width: 80px !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+    min-height: 40px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --rail-w: 40px;
+    --side-w: 100vw;
+  }
+  
+  .icbtn span {
+    display: none;
+  }
+  
+  #selPanel {
+    right: 8px !important;
+    bottom: 60px !important;
+    min-width: 260px !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+/* 🎯 BASE STYLES */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 14px/1.45 var(--font-family);
+  color: #111;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 📐 LAYOUT GRID */
+#app {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: var(--rail-w) var(--side-w) var(--gut-w) 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "rail toolbar toolbar toolbar" "rail lhs gut rhs";
+}
+
+/* 🔧 TOOLBAR */
+#toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  position: relative;
+  z-index: 1000;
+}
+
+/* 🎛️ FORM CONTROLS - 일관된 스타일링 */
+.form-control,
+select,
+input[type="text"],
+input[type="file"],
+input[type="number"],
+input[type="url"],
+input[type="search"] {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 300;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.form-control:focus,
+select:focus,
+input:focus {
+  outline: none;
+  border-color: var(--c-sky);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+.form-control:invalid {
+  border-color: var(--c-danger);
+}
+
+/* 🏷️ BADGES & STATUS */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.badge.ok {
+  border-color: #cfe9d5;
+  color: var(--c-success);
+  background: #f0fdf4;
+}
+
+.badge.warn {
+  border-color: #fed7aa;
+  color: var(--c-warning);
+  background: #fffbeb;
+}
+
+.badge.bad {
+  border-color: #fecaca;
+  color: var(--c-danger);
+  background: #fef2f2;
+}
+
+/* 🔘 BUTTONS - 향상된 버튼 시스템 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+.btn-sky {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+  color: #fff;
+}
+
+.btn-accent {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: #fff;
+}
+
+.btn-util {
+  background: var(--c-util);
+  border-color: var(--c-util);
+  color: #fff;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: currentColor;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 📱 LEFT RAIL */
+#rail {
+  grid-area: rail;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  gap: 8px;
+  position: relative;
+  z-index: 1001;
+}
+
+.logo-box {
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.logo-box svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.icbtn {
+  width: 56px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.icbtn svg {
+  width: 22px;
+  height: 22px;
+  stroke: #111;
+  fill: none;
+  stroke-width: 2;
+  transition: all var(--transition-fast);
+}
+
+.icbtn span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #111;
+  transition: all var(--transition-fast);
+}
+
+.icbtn.active {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+  box-shadow: var(--shadow-md);
+}
+
+.icbtn.active svg,
+.icbtn.active span {
+  stroke: #fff;
+  color: #fff;
+}
+
+.icbtn:hover:not(.active) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* 📋 LEFT SIDEBAR */
+#lhs {
+  grid-area: lhs;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  overflow: auto;
+  font-size: var(--flt-font);
+}
+
+/* 🔍 DETAILS & ACCORDION */
+details {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+details:last-child {
+  border-bottom: none;
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::after {
+  content: '+';
+  font-size: 18px;
+  font-weight: 300;
+  transition: transform var(--transition-fast);
+}
+
+details[open] summary::after {
+  transform: rotate(45deg);
+}
+
+summary:hover {
+  background: #f8fafc;
+}
+
+details[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.card {
+  padding: 12px;
+}
+
+/* 📏 RESIZER */
+#gut {
+  grid-area: gut;
+  background: #f3f4f6;
+  cursor: col-resize;
+  transition: background var(--transition-fast);
+}
+
+#gut:hover {
+  background: #e5e7eb;
+}
+
+/* 🗺️ MAP CONTAINER */
+#rhs {
+  grid-area: rhs;
+  position: relative;
+  background: #fafafa;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+/* 🔘 MAP CONTROLS */
+.map-bottom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  z-index: 6500;
+}
+
+.toolbar-map {
+  position: static;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 6500;
+}
+
+/* 📋 PANELS */
+.panel {
+  position: absolute;
+  right: 16px;
+  bottom: 90px;
+  width: min(640px, 60vw);
+  max-height: 60vh;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 6000;
+  display: none;
+  min-width: 360px;
+  min-height: 220px;
+  backdrop-filter: blur(10px);
+}
+
+.panel .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: move;
+  user-select: none;
+}
+
+.panel .head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.panel .body {
+  overflow: auto;
+  max-height: calc(60vh - 60px);
+}
+
+/* 📊 TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tbl-font);
+  border: 1px solid #e2e8f0;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 8px;
+  font-weight: 700;
+  border-right: 1px solid #f1f5f9;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  padding: 8px;
+  font-weight: 400;
+  background: #fff;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+tbody tr.selected {
+  background: #eff6ff;
+  border-color: var(--c-sky);
+}
+
+/* 🎯 MARKERS */
+.mk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1;
+  transform-origin: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mk-circle {
+  width: var(--mk);
+  height: var(--mk);
+  border-radius: 50%;
+  border: 2px solid #000;
+  background: #fff;
+  color: #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-tag {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-bubble {
+  position: relative;
+  padding: 4px 8px 6px 8px;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-bubble i {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -7px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #000;
+}
+
+.mk-bubble.sel {
+  background: var(--c-danger);
+  color: #fff;
+  border-color: var(--c-danger);
+}
+
+.mk-bubble.sel i {
+  border-top-color: var(--c-danger);
+}
+
+.mk.hover {
+  transform: scale(1.15);
+  z-index: 1000;
+}
+
+/* 🔧 UTILITY CLASSES */
+.small { font-size: 12px; color: #6b7280; font-weight: 400; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* 🎨 FORM LAYOUTS */
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.row > * {
+  flex: 1 1 auto;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #111;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.chip input[type="checkbox"] {
+  margin: 0;
+}
+
+/* 🎛️ SWITCHES */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+
+.switch input {
+  display: none;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 2px;
+  top: 1px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all var(--transition-normal);
+}
+
+.switch input:checked + .slider {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* 🏷️ WATERMARK */
+#wm {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  z-index: 9999;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #666;
+  backdrop-filter: blur(4px);
+}
+
+/* 패널 리사이즈 핸들 */
+.panel .edge {
+  position: absolute;
+  background: transparent;
+}
+
+.panel .e-left {
+  left: -16px;
+  top: 0;
+  width: 22px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.panel .e-right {
+  right: -16px;
+  top: 0;
+  width: 22px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.panel .e-top {
+  top: -20px;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  cursor: ns-resize;
+}
+
+.panel .e-bottom {
+  bottom: -16px;
+  left: 0;
+  width: 100%;
+  height: 22px;
+  cursor: ns-resize;
+}
+
+.panel.dragging .edge {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.panel.resizing .head {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* 경로 외 마커 숨김 */
+.clo-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 지도 차단 실드 */
+#mapShield {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 5999;
+  display: none;
+}
+
+/* 다크모드 지원 */
+.bw #map {
+  filter: grayscale(100%) contrast(105%);
+}
+
+body.dark {
+  background: #0b1220;
+  color: #e5e7eb;
+}
+
+body.dark #toolbar,
+body.dark #lhs,
+body.dark #rail,
+body.dark .panel {
+  background: #0f172a;
+  border-color: #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark details {
+  border-color: #1f2937;
+}
+
+body.dark summary {
+  color: #e5e7eb;
+}
+
+body.dark .card {
+  background: #0f172a;
+}
+
+body.dark select,
+body.dark input[type="text"],
+body.dark input[type="file"],
+body.dark input[type="number"],
+body.dark input[type="search"] {
+  background: #0b1220;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+body.dark .chip {
+  background: #0b1322;
+  border-color: #243041;
+  color: #e5e7eb;
+}
+
+body.dark .panel .head {
+  background: #0b1322;
+  border-bottom-color: #243041;
+}
+
+body.dark table {
+  background: #0f172a;
+  border-color: #243041;
+}
+
+body.dark thead th {
+  background: #0b1322;
+  border-bottom-color: #243041;
+  border-right-color: #243041;
+}
+
+body.dark tbody td {
+  background: #0f172a;
+  border-right-color: #243041;
+  border-bottom-color: #243041;
+}
+
+body.dark .icbtn {
+  background: #0f172a;
+  border-color: #243041;
+}
+
+body.dark .icbtn svg {
+  stroke: #e5e7eb;
+}
+
+body.dark .icbtn span {
+  color: #e5e7eb;
+}
+
+body.dark .badge {
+  background: #111827;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark .badge.ok {
+  background: #0f1a14;
+  border-color: #1a3c2a;
+  color: #8bf0b2;
+}
+
+body.dark .badge.warn {
+  background: #2a2310;
+  border-color: #4b3a0e;
+  color: #ffd36a;
+}
+
+body.dark .badge.bad {
+  background: #2a1212;
+  border-color: #4b1e1e;
+  color: #ff9e9e;
+}
+
+/* 프린트 스타일 */
+@media print {
+  #rail, #lhs, .panel, .map-bottom { display: none !important; }
+  #rhs { grid-column: 1 / -1; }
+  body { background: white !important; }
+}
+</style>
+
+<link id="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body>
+<!-- 지도 상호작용 차단용 실드 -->
+<div id="mapShield" aria-hidden="true"></div>
+
+<!-- Mobile Overlay -->
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<div id="app">
+  <!-- 📱 LEFT RAIL - 모바일 친화적 네비게이션 -->
+  <aside id="rail">
+    <div class="logo-box" title="CLUSTRO v13.0 - 통합 버전" aria-label="CLUSTRO 로고">
+      <svg viewBox="0 0 64 64" aria-label="CLUSTRO logo">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#0EA5E9"/>
+            <stop offset="1" stop-color="#1F3A8A"/>
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r="28" fill="url(#g)" stroke="#0b2540" stroke-width="2"/>
+        <circle cx="22" cy="22" r="4" fill="#fff"/>
+        <circle cx="42" cy="22" r="4" fill="#fff"/>
+        <circle cx="22" cy="42" r="4" fill="#fff"/>
+        <circle cx="42" cy="42" r="4" fill="#fff"/>
+        <path d="M22 22 L42 42 M42 22 L22 42" stroke="#fff" stroke-width="2"/>
+      </svg>
+    </div>
+    
+    <button class="icbtn" data-target="#secData" title="데이터 관리" aria-label="데이터 관리" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 7h18M3 12h18M3 17h18"/>
+        <circle cx="7" cy="7" r="1"/>
+        <circle cx="11" cy="12" r="1"/>
+        <circle cx="15" cy="17" r="1"/>
+      </svg>
+      <span>데이터</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secFilter" title="필터 설정" aria-label="필터 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 5h18l-7 8v5l-4 2v-7z"/>
+      </svg>
+      <span>필터</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secMap" title="지도 설정" aria-label="지도 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6l7-3 7 3 4-2v16l-7 3-7-3-4 2V6zM10 3v16M17 6v15M3 6v14"/>
+      </svg>
+      <span>지도</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secRoute" title="경로 계획" aria-label="경로 계획" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 6h6l2 4h8M4 18h10l2-4h4"/>
+      </svg>
+      <span>경로</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secPrint" title="출력 설정" aria-label="출력 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9V3h12v6M6 14h12v7H6z"/>
+        <rect x="3" y="9" width="18" height="7" rx="2"/>
+      </svg>
+      <span>출력</span>
+    </button>
+    
+    <!-- 다크모드 토글 -->
+    <label class="chip" style="font-size:10px;user-select:none;padding:4px 6px;margin-top:8px">
+      <input type="checkbox" id="darkToggle" style="margin-right:4px"> 다크모드
+    </label>
+    
+    <div style="margin-top:auto;font-size:11px;color:#9ca3af;text-align:center;">
+      <div>v13.0</div>
+      <div style="font-size:9px;">🔒 통합</div>
+    </div>
+  </aside>
+
+  <!-- 🔧 TOOLBAR - 반응형 도구모음 -->
+  <header id="toolbar" role="banner">
+    <button class="btn btn-sky mobile-menu-btn" id="mobileMenuBtn" aria-label="메뉴 열기" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+      메뉴
+    </button>
+    
+    <div class="badge ok">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 12l2 2 4-4"></path>
+        <circle cx="12" cy="12" r="9"></circle>
+      </svg>
+      보안 강화됨
+    </div>
+    
+    <div class="badge" id="statusBadge">
+      <span id="statusText">준비됨</span>
+    </div>
+    
+    <!-- 상단 지도 컨트롤: 선택목록/맞춤/필터적용 -->
+    <div id="mapControlsTop" style="display:flex;gap:6px;align-items:center">
+      <button class="btn btn-sky" id="btnToggleSelTop" title="선택목록">선택목록</button>
+      <button class="btn btn-sky" id="btnFitTop" title="맞춤">맞춤</button>
+      <button class="btn btn-sky" id="btnRefreshTop" title="필터적용">필터적용</button>
+    </div>
+    
+    <div style="display:flex;gap:6px;align-items:center">
+      <!-- 라벨 소스 선택 -->
+      <span class="small">라벨</span>
+      <select id="labelSrc">
+        <option value="id">고유번호</option>
+        <option value="name">시설명</option>
+        <option value="addr">구분주소</option>
+      </select>
+      
+      <!-- 배경 지도 선택 -->
+      <span class="small">배경</span>
+      <select id="baseSelect">
+        <option value="osm">OpenStreetMap</option>
+        <option value="vworld_base" selected>VWorld 기본</option>
+        <option value="vworld_satellite">VWorld 위성</option>
+        <option value="google_roadmap">Google 도로</option>
+        <option value="google_satellite">Google 위성</option>
+      </select>
+      
+      <!-- 줌 컨트롤 -->
+      <span class="small">줌</span>
+      <input type="range" id="zoomRange" min="5" max="19" step="0.1" value="12" style="width:160px">
+      <span id="zoomVal" class="badge">12.0</span>
+    </div>
+    
+    <div style="display:flex;gap:6px;align-items:center">
+      <!-- 경로 알고리즘 선택 -->
+      <select id="routeMethod">
+        <option value="nn2opt" selected>빠른(최근점+2-opt)</option>
+        <option value="nn">최근점</option>
+        <option value="cluster">클러스터</option>
+        <option value="hilbert">힐버트</option>
+        <option value="kmeans">K-평균</option>
+      </select>
+      
+      <!-- 하루 최대 포인트 -->
+      <label class="small">하루 최대</label>
+      <input type="number" id="dailyMax" value="50" min="1" max="999" style="width:84px">
+      
+      <!-- 경로 계산 버튼 -->
+      <button class="btn btn-primary" id="btnRoute" style="padding:6px 12px;font-size:12px">경로 계산</button>
+      <button class="btn btn-util" id="btnRouteClear" style="padding:6px 12px;font-size:12px">초기화</button>
+    </div>
+    
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <span class="badge" id="bTotal">총: 0</span>
+      <span class="badge ok" id="bShown">표시: 0</span>
+      <span class="badge warn" id="bMissing">좌표없음: 0</span>
+      <span class="badge bad" id="bFiltered">필터제외: 0</span>
+    </div>
+    
+    <!-- 숨겨진 파일 입력 -->
+    <input type="file" id="selFile" accept=".xlsx,.xls,.xlsm,.tsv,.csv" style="display:none">
+  </header>
+
+  <!-- 📋 LEFT SIDEBAR - 향상된 UI/UX -->
+  <nav id="lhs" role="navigation" aria-label="메인 네비게이션">
+    <!-- 📊 DATA SECTION -->
+    <section id="secData" class="sec active">
+      <details open>
+        <summary role="button" aria-expanded="true">
+          <span>📊 데이터 로드</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label class="form-control" for="fileInput" style="cursor: pointer; text-align: center;">
+              <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.json" style="display: none;" aria-describedby="fileHelp">
+              📁 파일 선택
+            </label>
+          </div>
+          <div id="fileHelp" class="small" style="margin-top: 4px;">
+            Excel(.xlsx, .xlsm), CSV, JSON 파일 지원 (최대 10MB)
+          </div>
+        </div>
+      </details>
+
+      <details id="adv" style="display:none">
+        <summary role="button" aria-expanded="false">
+          <span>⚙️ 고급 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label for="sheet">시트:</label>
+            <select id="sheet" class="form-control" aria-label="시트 선택"></select>
+          </div>
+          <div class="row">
+            <label for="latCol">위도 열:</label>
+            <input type="text" id="latCol" value="R" class="form-control" aria-label="위도 컬럼">
+          </div>
+          <div class="row">
+            <label for="lngCol">경도 열:</label>
+            <input type="text" id="lngCol" value="S" class="form-control" aria-label="경도 컬럼">
+          </div>
+          <button class="btn btn-primary" id="apply">적용</button>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>📈 데이터 현황</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <span class="badge" id="totalBadge">전체: 0</span>
+            <span class="badge ok" id="validBadge">유효: 0</span>
+            <span class="badge warn" id="errorBadge">오류: 0</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🔍 FILTER SECTION -->
+    <section id="secFilter" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🔍 검색 필터</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <input type="search" 
+                   id="scopeInput" 
+                   placeholder="읍면동 또는 군집번호 검색..." 
+                   class="form-control"
+                   autocomplete="off"
+                   aria-label="검색어 입력">
+            <button class="btn btn-sky" id="btnApplyScope">
+              검색
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🏘️ 읍면동별</span>
+        </summary>
+        <div class="card">
+          <div class="chips" id="emdBox" role="group" aria-label="읍면동 필터"></div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>👥 군집별</span>
+        </summary>
+        <div class="card">
+          <div class="chips" id="grpBox" role="group" aria-label="군집 필터"></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🗺️ MAP SECTION -->
+    <section id="secMap" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🗺️ 지도 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label>마커 스타일:</label>
+            <select id="markerStyle" class="form-control" aria-label="마커 스타일 선택">
+              <option value="circle">원형</option>
+              <option value="tag">태그</option>
+              <option value="bubble" selected>말풍선</option>
+            </select>
+          </div>
+          
+          <div class="row" style="margin-top: 12px;">
+            <label>
+              <input type="checkbox" id="clusterToggle" checked> 
+              마커 클러스터링
+            </label>
+          </div>
+          
+          <div class="row">
+            <label>
+              <input type="checkbox" id="bwToggle"> 
+              흑백 모드
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🎨 표시 옵션</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label for="fontSizeRange">폰트 크기:</label>
+            <input type="range" 
+                   id="fontSizeRange" 
+                   min="10" 
+                   max="18" 
+                   value="14" 
+                   class="form-control"
+                   aria-label="폰트 크기 조절">
+            <span id="fontSizeValue">14px</span>
+          </div>
+          
+          <div class="row">
+            <label for="markerSizeRange">마커 크기:</label>
+            <input type="range" 
+                   id="markerSizeRange" 
+                   min="20" 
+                   max="50" 
+                   value="30" 
+                   class="form-control"
+                   aria-label="마커 크기 조절">
+            <span id="markerSizeValue">30px</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🛣️ ROUTE SECTION -->
+    <section id="secRoute" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🛣️ 경로 계획</span>
+        </summary>
+        <div class="card">
+          <!-- 경로 외 마커 숨김 토글 -->
+          <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label class="chip" style="user-select:none">
+              <input type="checkbox" id="toggleHideNonRoute"> 경로 외 마커 숨김
+            </label>
+            <span class="small">※ 표의 <b>고유번호</b>를 기준으로 숨김 처리</span>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>📋 선택 관리</span>
+        </summary>
+        <div class="card">
+          <button class="btn btn-sky" id="btnSelLoad">
+            📂 선택목록 로드
+          </button>
+          
+          <button class="btn btn-util" id="btnSelClear">
+            🗑️ 선택 초기화
+          </button>
+          
+          <div id="selectionStats" class="small" style="margin-top: 8px;">
+            선택된 항목: <span id="selectedCount">0</span>개
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🖨️ PRINT SECTION -->
+    <section id="secPrint" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🖨️ 출력 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <button class="btn btn-primary" id="btnExportExcel">
+              📊 Excel 내보내기
+            </button>
+          </div>
+          
+          <div class="row">
+            <button class="btn btn-accent" id="btnPrintScreen">
+              🖨️ 인쇄하기
+            </button>
+          </div>
+        </div>
+      </details>
+    </section>
+  </nav>
+
+  <!-- 📏 RESIZER -->
+  <div id="gut" title="패널 크기 조절" tabindex="0" role="separator" aria-label="패널 크기 조절"></div>
+
+  <!-- 🗺️ MAP CONTAINER -->
+  <main id="rhs" role="main">
+    <div id="map" aria-label="인터랙티브 지도"></div>
+    
+    <!-- MAP CONTROLS -->
+    <div class="map-bottom">
+      <div class="toolbar-map">
+        <button class="btn btn-sky" id="btnCenterMap" title="지도 중심 이동">
+          🎯 중심
+        </button>
+        
+        <button class="btn btn-primary" id="btnFitBounds" title="전체 보기">
+          🔍 전체
+        </button>
+        
+        <button class="btn btn-accent" id="btnShowStats" title="통계 보기">
+          📊 통계
+        </button>
+      </div>
+    </div>
+    
+    <!-- WATERMARK -->
+    <div id="wm">CLUSTRO v13.0 통합 버전</div>
+  </main>
+</div>
+
+<!-- 📋 SELECTION PANEL -->
+<div class="panel" id="selPanel" role="dialog" aria-labelledby="selPanelTitle" aria-hidden="true">
+  <div class="head">
+    <h4 id="selPanelTitle">📋 선택된 항목</h4>
+    <button class="btn btn-util" id="btnClosePanel" aria-label="패널 닫기">
+      ✕
+    </button>
+  </div>
+  <div class="body">
+    <div style="padding: 8px;">
+      <button class="btn btn-accent" id="btnClearAll" style="margin-bottom: 8px;">
+        🗑️ 전체 삭제
+      </button>
+      <button class="btn btn-primary" id="btnExportSel" style="margin-bottom: 8px;">
+        📊 선택항목 Excel 저장
+      </button>
+    </div>
+    <table role="table" aria-label="선택된 항목 목록">
+      <thead>
+        <tr>
+          <th scope="col">고유번호</th>
+          <th scope="col">시설명</th>
+          <th scope="col">구분주소</th>
+          <th scope="col">경로순번</th>
+          <th scope="col" class="row-actions">삭제</th>
+        </tr>
+      </thead>
+      <tbody id="selBody"></tbody>
+    </table>
+  </div>
+  
+  <!-- 리사이즈 핸들 -->
+  <div class="edge e-left"></div>
+  <div class="edge e-right"></div>
+  <div class="edge e-top"></div>
+  <div class="edge e-bottom"></div>
+</div>
+
+<!-- 🔧 EXTERNAL SCRIPTS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- 🚀 MAIN APPLICATION SCRIPT -->
+<script>
+'use strict';
+
+/**
+ * CLUSTRO 통합 버전 v13.0
+ * UI/UX 최적화 기반으로 모든 기능 통합
+ */
+
+// 전역 변수
+let myMap, clusterGroup, routeLayer;
+let rows = [], rowsById = new Map(), selectedIds = new Set();
+let currentWorkbook = null;
+
+// jQuery-like 헬퍼
+const $ = (q, root = document) => root.querySelector(q);
+const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
+
+// 설정 변수
+let tblFont = 14, fltFont = 14, mk = 30;
+
+/**
+ * 🔒 보안 및 검증 함수들
+ */
+const SecurityUtils = {
+  escapeHtml(unsafe) {
+    if (unsafe == null) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  },
+
+  validateInput(input, type = 'text', maxLength = 1000) {
+    if (input == null) return '';
+    
+    input = String(input).trim();
+    
+    if (input.length > maxLength) {
+      input = input.substring(0, maxLength);
+    }
+    
+    switch(type) {
+      case 'number':
+        return input.replace(/[^\d.-]/g, '');
+      case 'alphanumeric':
+        return input.replace(/[^a-zA-Z0-9가-힣\s\-_]/g, '');
+      case 'coordinate':
+        return input.replace(/[^\d.-]/g, '');
+      default:
+        return input.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                   .replace(/javascript:/gi, '')
+                   .replace(/on\w+\s*=/gi, '')
+                   .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '');
+    }
+  },
+
+  validateFile(file) {
+    const errors = [];
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_TYPES = ['.xlsx', '.xls', '.xlsm', '.csv', '.json'];
+    
+    if (!file) {
+      errors.push('파일이 선택되지 않았습니다.');
+      return errors;
+    }
+    
+    if (file.size > MAX_SIZE) {
+      errors.push(`파일 크기가 너무 큽니다. (최대: ${MAX_SIZE/1024/1024}MB)`);
+    }
+    
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(fileExt)) {
+      errors.push(`허용되지 않는 파일 형식입니다. (허용: ${ALLOWED_TYPES.join(', ')})`);
+    }
+    
+    return errors;
+  }
+};
+
+/**
+ * 🔔 알림 시스템
+ */
+const NotificationSystem = {
+  show(message, type = 'success', duration = 3000) {
+    // 간단한 알림 구현
+    const badge = $('#statusBadge');
+    const statusText = $('#statusText');
+    
+    if (badge && statusText) {
+      const typeClass = type === 'error' ? 'bad' : (type === 'warning' ? 'warn' : 'ok');
+      badge.className = `badge ${typeClass}`;
+      statusText.textContent = message;
+      
+      setTimeout(() => {
+        badge.className = 'badge';
+        statusText.textContent = '준비됨';
+      }, duration);
+    }
+  }
+};
+
+/**
+ * 🗺️ 지도 초기화 및 관리
+ */
+async function initializeMap() {
+  try {
+    const mapContainer = $('#map');
+    if (!mapContainer) throw new Error('지도 컨테이너를 찾을 수 없습니다.');
+    
+    if (myMap) {
+      myMap.remove();
+    }
+    
+    myMap = L.map('map').setView([36.5, 127.5], 8);
+    
+    // 기본 타일 레이어
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(myMap);
+    
+    // 클러스터 그룹 초기화
+    clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false
+    });
+    
+    myMap.addLayer(clusterGroup);
+    
+    console.log('지도 초기화 완료');
+    
+  } catch (error) {
+    console.error('지도 초기화 실패:', error);
+    NotificationSystem.show('지도를 초기화할 수 없습니다.', 'error');
+  }
+}
+
+/**
+ * 📂 파일 처리 함수들
+ */
+async function loadExcelFile() {
+  const fileInput = $('#fileInput');
+  const file = fileInput?.files?.[0];
+  
+  if (!file) {
+    NotificationSystem.show('파일을 선택해주세요.', 'warning');
+    return;
+  }
+  
+  const validationErrors = SecurityUtils.validateFile(file);
+  if (validationErrors.length > 0) {
+    NotificationSystem.show(validationErrors.join('\n'), 'error');
+    return;
+  }
+  
+  try {
+    const workbook = await readExcelFile(file);
+    currentWorkbook = workbook;
+    
+    if (workbook.SheetNames.includes("2025DATA")) {
+      const processedRows = processWorksheet(workbook.Sheets["2025DATA"]);
+      await updateDataState(processedRows);
+      NotificationSystem.show(`데이터 로드 완료: ${processedRows.length}개 행`, 'success');
+    } else {
+      showAdvancedSettings(workbook);
+      NotificationSystem.show('2025DATA 시트를 찾을 수 없어 고급 설정을 엽니다.', 'warning');
+    }
+    
+  } catch (error) {
+    console.error('파일 로드 실패:', error);
+    NotificationSystem.show('파일을 읽을 수 없습니다.', 'error');
+  }
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        resolve(workbook);
+      } catch (error) {
+        reject(new Error(`Excel 파일 파싱 실패: ${error.message}`));
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function processWorksheet(worksheet) {
+  try {
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    
+    return jsonData.map((row, index) => {
+      const processedRow = {
+        id: SecurityUtils.validateInput(row['고유번호'] || row['ID'] || index + 1, 'alphanumeric'),
+        name: SecurityUtils.validateInput(row['시설명'] || row['name'] || '', 'text'),
+        addr: SecurityUtils.validateInput(row['구분주소'] || row['address'] || '', 'text'),
+        emd: SecurityUtils.validateInput(row['읍면동'] || row['emd'] || '', 'alphanumeric'),
+        grp: SecurityUtils.validateInput(row['군집'] || row['group'] || '', 'number'),
+        lat: parseFloat(SecurityUtils.validateInput(row['위도'] || row['lat'] || 0, 'coordinate')),
+        lng: parseFloat(SecurityUtils.validateInput(row['경도'] || row['lng'] || 0, 'coordinate'))
+      };
+      
+      processedRow.valid = !isNaN(processedRow.lat) && !isNaN(processedRow.lng) && 
+                          processedRow.lat !== 0 && processedRow.lng !== 0;
+      
+      return processedRow;
+    }).filter(row => row.id);
+    
+  } catch (error) {
+    throw new Error(`워크시트 처리 실패: ${error.message}`);
+  }
+}
+
+async function updateDataState(newRows) {
+  rows = newRows;
+  rowsById = new Map(newRows.map(row => [String(row.id), row]));
+  
+  const validRows = rows.filter(row => row.valid);
+  const errorRows = rows.filter(row => !row.valid);
+  
+  updateDataBadges(rows.length, validRows.length, errorRows.length);
+  await rebuildFilterBoxes();
+  await renderMap();
+}
+
+function updateDataBadges(total, valid, error) {
+  const totalBadge = $('#totalBadge');
+  const validBadge = $('#validBadge');  
+  const errorBadge = $('#errorBadge');
+  
+  if (totalBadge) totalBadge.textContent = `전체: ${total}`;
+  if (validBadge) validBadge.textContent = `유효: ${valid}`;
+  if (errorBadge) {
+    errorBadge.textContent = `오류: ${error}`;
+    errorBadge.className = error > 0 ? 'badge warn' : 'badge ok';
+  }
+  
+  // 툴바 배지 업데이트
+  const bTotal = $('#bTotal');
+  const bShown = $('#bShown');
+  const bMissing = $('#bMissing');
+  
+  if (bTotal) bTotal.textContent = `총: ${total}`;
+  if (bShown) bShown.textContent = `표시: ${valid}`;
+  if (bMissing) bMissing.textContent = `좌표없음: ${error}`;
+}
+
+function showAdvancedSettings(workbook) {
+  const advSection = $('#adv');
+  const sheetSelect = $('#sheet');
+  
+  if (!advSection || !sheetSelect) return;
+  
+  // 시트 목록 채우기
+  sheetSelect.innerHTML = '';
+  workbook.SheetNames.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    sheetSelect.appendChild(option);
+  });
+  
+  advSection.style.display = 'block';
+  advSection.open = true;
+}
+
+/**
+ * 🗺️ 지도 렌더링
+ */
+async function renderMap() {
+  if (!myMap) {
+    await initializeMap();
+  }
+  
+  if (!rows || rows.length === 0) {
+    NotificationSystem.show('표시할 데이터가 없습니다.', 'warning');
+    return;
+  }
+  
+  clusterGroup.clearLayers();
+  
+  const validRows = rows.filter(row => row.valid && row.lat && row.lng);
+  const markers = validRows.map(row => createMarker(row));
+  
+  if (markers.length > 0) {
+    clusterGroup.addLayers(markers);
+    const group = new L.featureGroup(markers);
+    myMap.fitBounds(group.getBounds(), { padding: [20, 20] });
+  }
+  
+  NotificationSystem.show(`${markers.length}개 마커가 표시되었습니다.`, 'success');
+}
+
+function createMarker(row) {
+  const marker = L.marker([row.lat, row.lng]);
+  
+  const markerStyle = $('#markerStyle')?.value || 'bubble';
+  const labelSrc = $('#labelSrc')?.value || 'id';
+  
+  let labelText = '';
+  switch(labelSrc) {
+    case 'name':
+      labelText = row.name || row.id;
+      break;
+    case 'addr':
+      labelText = row.addr || row.id;
+      break;
+    default:
+      labelText = row.id;
+  }
+  
+  // 마커 HTML 생성
+  const markerHtml = `<div class="mk mk-${markerStyle}">${SecurityUtils.escapeHtml(labelText)}<i></i></div>`;
+  
+  const divIcon = L.divIcon({
+    html: markerHtml,
+    className: 'custom-div-icon',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  });
+  
+  marker.setIcon(divIcon);
+  
+  // 팝업 내용
+  const popupContent = `
+    <div class="marker-popup">
+      <h4>${SecurityUtils.escapeHtml(row.name || '이름 없음')}</h4>
+      <p><strong>ID:</strong> ${SecurityUtils.escapeHtml(row.id)}</p>
+      <p><strong>주소:</strong> ${SecurityUtils.escapeHtml(row.addr || '주소 없음')}</p>
+      <p><strong>읍면동:</strong> ${SecurityUtils.escapeHtml(row.emd || '정보 없음')}</p>
+      <p><strong>군집:</strong> ${SecurityUtils.escapeHtml(row.grp || '정보 없음')}</p>
+      <div style="margin-top: 8px;">
+        <button class="btn btn-sky" onclick="selectItem('${SecurityUtils.escapeHtml(row.id)}')">
+          선택
+        </button>
+      </div>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  marker.rowData = row;
+  
+  return marker;
+}
+
+/**
+ * 🔍 필터링 기능
+ */
+async function rebuildFilterBoxes() {
+  if (!rows || rows.length === 0) return;
+  
+  const emdValues = [...new Set(rows.map(row => row.emd).filter(Boolean))].sort();
+  fillChipBox($('#emdBox'), emdValues, 'emd');
+  
+  const grpValues = [...new Set(rows.map(row => row.grp).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+  fillChipBox($('#grpBox'), grpValues, 'grp');
+}
+
+function fillChipBox(container, values, name) {
+  if (!container || !Array.isArray(values)) return;
+  
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  
+  if (values.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'small';
+    emptyDiv.textContent = '해당 항목 없음';
+    container.appendChild(emptyDiv);
+    return;
+  }
+  
+  values.forEach(value => {
+    const safeValue = SecurityUtils.validateInput(value, 'alphanumeric');
+    
+    const label = document.createElement('label');
+    label.className = 'chip';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = name;
+    checkbox.value = encodeURIComponent(safeValue);
+    checkbox.checked = true;
+    checkbox.addEventListener('change', debounce(applyFilters, 300));
+    
+    const textNode = document.createTextNode(' ' + safeValue);
+    
+    label.appendChild(checkbox);
+    label.appendChild(textNode);
+    container.appendChild(label);
+  });
+}
+
+async function applyFilters() {
+  if (!rows || rows.length === 0) return;
+  
+  const checkedEmd = new Set();
+  const checkedGrp = new Set();
+  
+  $$('input[name="emd"]:checked').forEach(cb => {
+    checkedEmd.add(decodeURIComponent(cb.value));
+  });
+  
+  $$('input[name="grp"]:checked').forEach(cb => {
+    checkedGrp.add(decodeURIComponent(cb.value));
+  });
+  
+  // 검색 필터
+  const searchTerm = $('#scopeInput')?.value?.trim().toLowerCase() || '';
+  
+  const filteredRows = rows.filter(row => {
+    if (checkedEmd.size > 0 && !checkedEmd.has(row.emd)) return false;
+    if (checkedGrp.size > 0 && !checkedGrp.has(row.grp)) return false;
+    
+    if (searchTerm) {
+      return (
+        row.name?.toLowerCase().includes(searchTerm) ||
+        row.addr?.toLowerCase().includes(searchTerm) ||
+        row.emd?.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    return true;
+  });
+  
+  // 임시로 filteredRows를 사용하여 렌더링
+  const originalRows = [...rows];
+  rows = filteredRows;
+  await renderMap();
+  rows = originalRows;
+  
+  NotificationSystem.show(`필터 적용: ${filteredRows.length}개 항목`, 'success');
+}
+
+/**
+ * 🎯 선택 관리
+ */
+function selectItem(id) {
+  const row = rowsById.get(String(id));
+  if (!row) return;
+  
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    removeFromSelection(id);
+  } else {
+    selectedIds.add(id);
+    addToSelection(row);
+  }
+  
+  updateSelectionCount();
+}
+
+function addToSelection(row) {
+  const tbody = $('#selBody');
+  if (!tbody) return;
+  
+  const tr = document.createElement('tr');
+  tr.dataset.id = row.id;
+  
+  tr.innerHTML = `
+    <td>${SecurityUtils.escapeHtml(row.id)}</td>
+    <td>${SecurityUtils.escapeHtml(row.name || '이름 없음')}</td>
+    <td>${SecurityUtils.escapeHtml(row.addr || '주소 없음')}</td>
+    <td><input type="number" class="routeOrder form-control" min="1" style="width:60px"></td>
+    <td class="row-actions">
+      <button class="btn btn-accent btn-sm" onclick="removeSelection('${SecurityUtils.escapeHtml(row.id)}')">삭제</button>
+    </td>
+  `;
+  
+  tbody.appendChild(tr);
+}
+
+function removeFromSelection(id) {
+  const row = $(`#selBody tr[data-id="${id}"]`);
+  if (row) {
+    row.remove();
+  }
+}
+
+function removeSelection(id) {
+  selectedIds.delete(id);
+  removeFromSelection(id);
+  updateSelectionCount();
+}
+
+function updateSelectionCount() {
+  const countElement = $('#selectedCount');
+  if (countElement) {
+    countElement.textContent = selectedIds.size.toString();
+  }
+}
+
+function clearAllSelections() {
+  selectedIds.clear();
+  const tbody = $('#selBody');
+  if (tbody) {
+    tbody.innerHTML = '';
+  }
+  updateSelectionCount();
+  NotificationSystem.show('선택이 초기화되었습니다.', 'success');
+}
+
+/**
+ * 📊 내보내기 기능
+ */
+function exportToExcel() {
+  if (selectedIds.size === 0) {
+    NotificationSystem.show('선택된 항목이 없습니다.', 'warning');
+    return;
+  }
+  
+  const selectedData = Array.from(selectedIds).map(id => {
+    const row = rowsById.get(id);
+    const tr = $(`#selBody tr[data-id="${id}"]`);
+    const routeOrder = tr?.querySelector('.routeOrder')?.value || '';
+    
+    return {
+      '고유번호': row?.id || '',
+      '시설명': row?.name || '',
+      '구분주소': row?.addr || '',
+      '읍면동': row?.emd || '',
+      '군집': row?.grp || '',
+      '위도': row?.lat || '',
+      '경도': row?.lng || '',
+      '경로순번': routeOrder
+    };
+  });
+  
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(selectedData);
+  XLSX.utils.book_append_sheet(wb, ws, "선택목록");
+  XLSX.writeFile(wb, "선택목록.xlsx");
+  
+  NotificationSystem.show('Excel 파일로 내보냈습니다.', 'success');
+}
+
+/**
+ * 🛣️ 경로 계산
+ */
+function calculateRoute() {
+  if (selectedIds.size === 0) {
+    NotificationSystem.show('경로를 계산할 선택된 항목이 없습니다.', 'warning');
+    return;
+  }
+  
+  const method = $('#routeMethod')?.value || 'nn2opt';
+  const dailyMax = parseInt($('#dailyMax')?.value) || 50;
+  
+  const selectedData = Array.from(selectedIds).map(id => rowsById.get(id)).filter(Boolean);
+  
+  // 간단한 최근점 알고리즘 구현
+  const routes = calculateNearestNeighbor(selectedData, dailyMax);
+  
+  // 경로 순번을 테이블에 업데이트
+  routes.forEach((route, routeIndex) => {
+    route.forEach((point, pointIndex) => {
+      const tr = $(`#selBody tr[data-id="${point.id}"]`);
+      const input = tr?.querySelector('.routeOrder');
+      if (input) {
+        input.value = pointIndex + 1;
+      }
+    });
+  });
+  
+  NotificationSystem.show(`${method} 알고리즘으로 ${routes.length}개 경로가 계산되었습니다.`, 'success');
+  
+  // 경로 외 마커 숨김 적용
+  applyRouteFilter();
+}
+
+function calculateNearestNeighbor(points, maxPerRoute) {
+  if (!points || points.length === 0) return [];
+  
+  const routes = [];
+  const remaining = [...points];
+  
+  while (remaining.length > 0) {
+    const route = [];
+    let current = remaining.shift(); // 첫 번째 점을 시작점으로
+    route.push(current);
+    
+    // 최대 개수까지 가장 가까운 점들을 찾아 추가
+    while (route.length < maxPerRoute && remaining.length > 0) {
+      let nearestIndex = 0;
+      let minDistance = Infinity;
+      
+      remaining.forEach((point, index) => {
+        const distance = getDistance(current.lat, current.lng, point.lat, point.lng);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestIndex = index;
+        }
+      });
+      
+      current = remaining.splice(nearestIndex, 1)[0];
+      route.push(current);
+    }
+    
+    routes.push(route);
+  }
+  
+  return routes;
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // 지구 반지름 (km)
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function toRad(deg) {
+  return deg * (Math.PI/180);
+}
+
+function clearRoute() {
+  // 경로 순번 초기화
+  $$('#selBody .routeOrder').forEach(input => {
+    input.value = '';
+  });
+  
+  // 경로 외 마커 숨김 해제
+  const toggleHide = $('#toggleHideNonRoute');
+  if (toggleHide) toggleHide.checked = false;
+  applyRouteFilter();
+  
+  NotificationSystem.show('경로가 초기화되었습니다.', 'success');
+}
+
+/**
+ * 📋 패널 관리
+ */
+function showSelectionPanel() {
+  const panel = $('#selPanel');
+  if (panel) {
+    panel.style.display = 'block';
+    panel.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function hideSelectionPanel() {
+  const panel = $('#selPanel');
+  if (panel) {
+    panel.style.display = 'none';
+    panel.setAttribute('aria-hidden', 'true');
+  }
+}
+
+/**
+ * 🛡️ 경로 외 마커 숨김 기능
+ */
+function currentRouteIdSet() {
+  const set = new Set();
+  $$('#selBody tr').forEach(tr => {
+    const id = (tr.querySelector('td')?.textContent || '').trim();
+    const ord = tr.querySelector('input.routeOrder')?.value?.trim() || '';
+    if (id && ord) set.add(String(id));
+  });
+  return set;
+}
+
+function readMarkerIdFromEl(el) {
+  if (!el) return '';
+  const box = el.querySelector('.mk, .mk-circle, .mk-bubble, .mk-tag') || el.firstElementChild;
+  const t = (box?.textContent || '').trim();
+  const m = t.match(/\d{2,}/);
+  return m ? m[0] : t;
+}
+
+function iterMarkerBoxes() {
+  return $$('.leaflet-marker-pane > div');
+}
+
+function applyRouteFilter() {
+  const on = $('#toggleHideNonRoute')?.checked;
+  if (!on) {
+    iterMarkerBoxes().forEach(el => el.classList.remove('clo-hidden'));
+    return;
+  }
+  
+  const routeIds = currentRouteIdSet();
+  if (routeIds.size === 0) {
+    iterMarkerBoxes().forEach(el => el.classList.remove('clo-hidden'));
+    return;
+  }
+  
+  iterMarkerBoxes().forEach(el => {
+    const id = readMarkerIdFromEl(el);
+    if (routeIds.has(String(id))) {
+      el.classList.remove('clo-hidden');
+    } else {
+      el.classList.add('clo-hidden');
+    }
+  });
+}
+
+/**
+ * 🎯 유틸리티 함수들
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function setVar(name, value) {
+  document.documentElement.style.setProperty(name, value);
+}
+
+function updateFontVars() {
+  setVar('--tbl-font', tblFont + 'px');
+  setVar('--flt-font', fltFont + 'px');
+  setVar('--mk', mk + 'px');
+}
+
+/**
+ * 📱 반응형 지원
+ */
+function setupResponsive() {
+  const mobileMenuBtn = $('#mobileMenuBtn');
+  const mobileOverlay = $('#mobileOverlay');
+  const lhs = $('#lhs');
+  
+  function checkMobile() {
+    const isMobile = window.innerWidth <= 768;
+    if (mobileMenuBtn) {
+      mobileMenuBtn.style.display = isMobile ? 'flex' : 'none';
+    }
+  }
+  
+  if (mobileMenuBtn && mobileOverlay && lhs) {
+    mobileMenuBtn.addEventListener('click', () => {
+      lhs.classList.add('mobile-open');
+      mobileOverlay.classList.add('show');
+    });
+    
+    mobileOverlay.addEventListener('click', () => {
+      lhs.classList.remove('mobile-open');
+      mobileOverlay.classList.remove('show');
+    });
+  }
+  
+  checkMobile();
+  window.addEventListener('resize', debounce(() => {
+    checkMobile();
+    if (myMap) myMap.invalidateSize();
+  }, 250));
+}
+
+/**
+ * 📋 패널 드래그 및 리사이즈 기능
+ */
+function setupPanelInteractions() {
+  const panel = $('#selPanel');
+  const shield = $('#mapShield');
+  if (!panel || !shield) return;
+  
+  function showShield() { shield.style.display = 'block'; }
+  function hideShield() { shield.style.display = 'none'; }
+  
+  // 패널 hover 시 지도 상호작용 차단
+  panel.addEventListener('mouseenter', showShield);
+  panel.addEventListener('mouseleave', hideShield);
+  
+  // 드래그 기능
+  const head = panel.querySelector('.head') || panel;
+  let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
+  
+  head.addEventListener('mousedown', (e) => {
+    if (/BUTTON|A|INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    
+    const r = panel.getBoundingClientRect();
+    dragging = true;
+    panel.classList.add('dragging');
+    
+    sx = e.clientX;
+    sy = e.clientY;
+    sl = r.left;
+    st = r.top;
+    
+    panel.style.left = sl + 'px';
+    panel.style.top = st + 'px';
+    panel.style.right = '';
+    panel.style.bottom = '';
+    
+    document.body.style.userSelect = 'none';
+    showShield();
+    e.preventDefault();
+  });
+  
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    panel.style.left = (sl + (e.clientX - sx)) + 'px';
+    panel.style.top = (st + (e.clientY - sy)) + 'px';
+  });
+  
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    hideShield();
+  });
+  
+  // 더블클릭으로 기본 위치 복원
+  head.addEventListener('dblclick', () => {
+    panel.style.width = '';
+    panel.style.height = '';
+    panel.style.left = '';
+    panel.style.top = '';
+    panel.style.right = '16px';
+    panel.style.bottom = '90px';
+  });
+  
+  // 리사이즈 기능
+  setupPanelResize(panel, shield);
+}
+
+function setupPanelResize(panel, shield) {
+  const minW = 360, minH = 220;
+  let resizing = false, edge = '', sx = 0, sy = 0, sw = 0, sh = 0, sl = 0, st = 0;
+  
+  function showShield() { shield.style.display = 'block'; }
+  function hideShield() { shield.style.display = 'none'; }
+  
+  function startResize(e, which) {
+    const r = panel.getBoundingClientRect();
+    resizing = true;
+    edge = which;
+    sx = e.clientX;
+    sy = e.clientY;
+    sw = r.width;
+    sh = r.height;
+    sl = r.left;
+    st = r.top;
+    
+    panel.style.left = sl + 'px';
+    panel.style.top = st + 'px';
+    panel.style.right = '';
+    panel.style.bottom = '';
+    
+    document.body.style.cursor = (which === 'left' || which === 'right') ? 'ew-resize' : 'ns-resize';
+    showShield();
+    e.preventDefault();
+    
+    window.addEventListener('mousemove', moveResize);
+    window.addEventListener('mouseup', stopResize);
+  }
+  
+  function moveResize(e) {
+    if (!resizing) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    
+    if (edge === 'right') {
+      panel.style.width = Math.max(minW, sw + dx) + 'px';
+    }
+    if (edge === 'left') {
+      const w = Math.max(minW, sw - dx);
+      panel.style.width = w + 'px';
+      panel.style.left = (sl + dx) + 'px';
+    }
+    if (edge === 'bottom') {
+      panel.style.height = Math.max(minH, sh + dy) + 'px';
+    }
+    if (edge === 'top') {
+      const h = Math.max(minH, sh - dy);
+      panel.style.height = h + 'px';
+      panel.style.top = (st + dy) + 'px';
+    }
+  }
+  
+  function stopResize() {
+    if (!resizing) return;
+    resizing = false;
+    edge = '';
+    document.body.style.cursor = '';
+    hideShield();
+    window.removeEventListener('mousemove', moveResize);
+    window.removeEventListener('mouseup', stopResize);
+  }
+  
+  // 리사이즈 핸들에 이벤트 리스너 추가
+  panel.querySelector('.e-left')?.addEventListener('mousedown', e => startResize(e, 'left'));
+  panel.querySelector('.e-right')?.addEventListener('mousedown', e => startResize(e, 'right'));
+  panel.querySelector('.e-top')?.addEventListener('mousedown', e => startResize(e, 'top'));
+  panel.querySelector('.e-bottom')?.addEventListener('mousedown', e => startResize(e, 'bottom'));
+}
+
+/**
+ * 🚀 이벤트 리스너 설정
+ */
+function setupEventListeners() {
+  // 파일 입력
+  const fileInput = $('#fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', loadExcelFile);
+  }
+  
+  // 고급 설정 적용
+  const applyBtn = $('#apply');
+  if (applyBtn) {
+    applyBtn.addEventListener('click', () => {
+      if (!currentWorkbook) return;
+      
+      const sheetName = $('#sheet')?.value;
+      const latCol = $('#latCol')?.value || 'R';
+      const lngCol = $('#lngCol')?.value || 'S';
+      
+      if (sheetName && currentWorkbook.Sheets[sheetName]) {
+        const processedRows = processWorksheet(currentWorkbook.Sheets[sheetName], latCol, lngCol);
+        updateDataState(processedRows);
+        NotificationSystem.show(`${sheetName} 시트에서 ${processedRows.length}개 행을 로드했습니다.`, 'success');
+      }
+    });
+  }
+  
+  // 검색 필터
+  const scopeInput = $('#scopeInput');
+  const btnApplyScope = $('#btnApplyScope');
+  if (scopeInput && btnApplyScope) {
+    scopeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') applyFilters();
+    });
+    btnApplyScope.addEventListener('click', applyFilters);
+  }
+  
+  // 지도 컨트롤
+  $('#btnToggleSelTop')?.addEventListener('click', showSelectionPanel);
+  $('#btnFitTop')?.addEventListener('click', () => {
+    if (clusterGroup && clusterGroup.getLayers().length > 0) {
+      myMap.fitBounds(clusterGroup.getBounds(), { padding: [20, 20] });
+    }
+  });
+  $('#btnRefreshTop')?.addEventListener('click', applyFilters);
+  
+  // 선택 관리
+  $('#btnSelLoad')?.addEventListener('click', () => $('#selFile').click());
+  $('#btnSelClear')?.addEventListener('click', clearAllSelections);
+  $('#selectedCount')?.addEventListener('click', showSelectionPanel);
+  
+  // 경로 계산
+  $('#btnRoute')?.addEventListener('click', calculateRoute);
+  $('#btnRouteClear')?.addEventListener('click', clearRoute);
+  
+  // 패널 컨트롤
+  $('#btnClosePanel')?.addEventListener('click', hideSelectionPanel);
+  $('#btnClearAll')?.addEventListener('click', clearAllSelections);
+  $('#btnExportSel')?.addEventListener('click', exportToExcel);
+  
+  // 내보내기
+  $('#btnExportExcel')?.addEventListener('click', exportToExcel);
+  $('#btnPrintScreen')?.addEventListener('click', () => window.print());
+  
+  // 지도 컨트롤
+  $('#btnCenterMap')?.addEventListener('click', () => {
+    if (rows.length > 0) {
+      const validRows = rows.filter(row => row.valid);
+      if (validRows.length > 0) {
+        const avgLat = validRows.reduce((sum, row) => sum + row.lat, 0) / validRows.length;
+        const avgLng = validRows.reduce((sum, row) => sum + row.lng, 0) / validRows.length;
+        myMap.setView([avgLat, avgLng], 12);
+      }
+    }
+  });
+  
+  $('#btnFitBounds')?.addEventListener('click', () => {
+    if (clusterGroup && clusterGroup.getLayers().length > 0) {
+      myMap.fitBounds(clusterGroup.getBounds(), { padding: [20, 20] });
+    }
+  });
+  
+  // 설정 컨트롤
+  $('#fontSizeRange')?.addEventListener('input', (e) => {
+    const size = e.target.value + 'px';
+    $('#fontSizeValue').textContent = size;
+    tblFont = fltFont = parseInt(e.target.value);
+    updateFontVars();
+  });
+  
+  $('#markerSizeRange')?.addEventListener('input', (e) => {
+    const size = e.target.value + 'px';
+    $('#markerSizeValue').textContent = size;
+    mk = parseInt(e.target.value);
+    updateFontVars();
+    renderMap();
+  });
+  
+  // 스타일 토글
+  $('#darkToggle')?.addEventListener('change', (e) => {
+    document.body.classList.toggle('dark', e.target.checked);
+  });
+  
+  $('#bwToggle')?.addEventListener('change', (e) => {
+    document.body.classList.toggle('bw', e.target.checked);
+  });
+  
+  $('#clusterToggle')?.addEventListener('change', renderMap);
+  $('#markerStyle')?.addEventListener('change', renderMap);
+  $('#labelSrc')?.addEventListener('change', renderMap);
+  $('#baseSelect')?.addEventListener('change', updateBaseLayer);
+  
+  $('#toggleHideNonRoute')?.addEventListener('change', applyRouteFilter);
+  
+  // 줌 컨트롤
+  const zoomRange = $('#zoomRange');
+  const zoomVal = $('#zoomVal');
+  if (zoomRange && zoomVal) {
+    zoomRange.addEventListener('input', (e) => {
+      const zoom = parseFloat(e.target.value);
+      zoomVal.textContent = zoom.toFixed(1);
+      if (myMap) myMap.setZoom(zoom);
+    });
+  }
+  
+  // 선택목록 로드
+  $('#selFile')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xlsm') || file.name.toLowerCase().endsWith('.xls')) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+        
+        clearAllSelections();
+        
+        data.forEach(row => {
+          const id = row["고유번호"] || row["id"] || row["ID"];
+          const baseRow = rowsById.get(String(id));
+          if (baseRow) {
+            selectedIds.add(String(id));
+            addToSelection(baseRow);
+            
+            // 경로 순번 설정
+            const routeOrder = row["경로"] || row["경로순번"] || '';
+            if (routeOrder) {
+              const tr = $(`#selBody tr[data-id="${id}"]`);
+              const input = tr?.querySelector('.routeOrder');
+              if (input) input.value = routeOrder;
+            }
+          }
+        });
+        
+        NotificationSystem.show('선택목록이 로드되었습니다.', 'success');
+      }
+    } catch (error) {
+      console.error('선택목록 로드 실패:', error);
+      NotificationSystem.show('파일을 읽을 수 없습니다.', 'error');
+    }
+    
+    e.target.value = '';
+  });
+}
+
+function updateBaseLayer() {
+  const baseSelect = $('#baseSelect');
+  if (!baseSelect || !myMap) return;
+  
+  // 기존 타일 레이어 제거
+  myMap.eachLayer((layer) => {
+    if (layer instanceof L.TileLayer) {
+      myMap.removeLayer(layer);
+    }
+  });
+  
+  const baseType = baseSelect.value;
+  let tileLayer;
+  
+  switch (baseType) {
+    case 'vworld_base':
+      tileLayer = L.tileLayer('http://api.vworld.kr/req/wmts/1.0.0/EB30978A-DC8F-3FD0-B46F-CDC6C3B96D84/Base/{z}/{y}/{x}.png', {
+        attribution: '© VWorld'
+      });
+      break;
+    case 'vworld_satellite':
+      tileLayer = L.tileLayer('http://api.vworld.kr/req/wmts/1.0.0/EB30978A-DC8F-3FD0-B46F-CDC6C3B96D84/Satellite/{z}/{y}/{x}.jpeg', {
+        attribution: '© VWorld'
+      });
+      break;
+    case 'google_roadmap':
+      tileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        attribution: '© Google'
+      });
+      break;
+    case 'google_satellite':
+      tileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: '© Google'
+      });
+      break;
+    default:
+      tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      });
+  }
+  
+  tileLayer.addTo(myMap);
+}
+
+/**
+ * 🎯 네비게이션 설정
+ */
+function setupNavigation() {
+  $$('.icbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      if (!target) return;
+      
+      // 모든 섹션 숨기기
+      $$('.sec').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      
+      // 모든 버튼 비활성화
+      $$('.icbtn').forEach(b => {
+        b.classList.remove('active');
+      });
+      
+      // 선택된 섹션 표시
+      const targetSection = $(target);
+      if (targetSection) {
+        targetSection.classList.add('active');
+        btn.classList.add('active');
+      }
+      
+      // 모바일에서 메뉴 닫기
+      if (window.innerWidth <= 768) {
+        $('#lhs')?.classList.remove('mobile-open');
+        $('#mobileOverlay')?.classList.remove('show');
+      }
+    });
+  });
+}
+
+/**
+ * 📏 사이드바 크기 조정
+ */
+function setupGutResize() {
+  let dragging = false, sx, sw;
+  const gut = $('#gut');
+  const lhs = $('#lhs');
+  
+  if (!gut) return;
+  
+  gut.addEventListener('mousedown', (e) => {
+    dragging = true;
+    sx = e.clientX;
+    sw = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--side-w')) || 380;
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+  
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const w = Math.min(640, Math.max(0, sw + (e.clientX - sx)));
+    setVar('--side-w', w + 'px');
+    if (lhs) {
+      lhs.style.display = (w === 0) ? 'none' : 'block';
+    }
+    if (myMap) myMap.invalidateSize();
+  });
+  
+  window.addEventListener('mouseup', () => {
+    if (dragging) {
+      dragging = false;
+      document.body.style.cursor = '';
+    }
+  });
+}
+
+/**
+ * 🚀 초기화 함수
+ */
+async function init() {
+  try {
+    console.log('🚀 CLUSTRO 통합 버전 v13.0 초기화 시작...');
+    
+    // 지도 초기화
+    await initializeMap();
+    
+    // 이벤트 리스너 설정
+    setupEventListeners();
+    setupNavigation();
+    setupResponsive();
+    setupGutResize();
+    setupPanelInteractions();
+    
+    // 첫 번째 섹션 활성화
+    const firstBtn = $('.icbtn');
+    const firstSection = $('.sec');
+    if (firstBtn && firstSection) {
+      firstBtn.classList.add('active');
+      firstSection.classList.add('active');
+    }
+    
+    console.log('✅ 애플리케이션 초기화 완료');
+    NotificationSystem.show('CLUSTRO v13.0이 준비되었습니다.', 'success');
+    
+  } catch (error) {
+    console.error('초기화 실패:', error);
+    NotificationSystem.show('애플리케이션 초기화에 실패했습니다.', 'error');
+  }
+}
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', init);
+
+// 전역 함수로 노출 (버튼 onclick에서 사용)
+window.selectItem = selectItem;
+window.removeSelection = removeSelection;
+
+console.log('%c🔒 CLUSTRO 통합 버전 v13.0', 'color: #0EA5E9; font-weight: bold; font-size: 16px;');
+console.log('%cUI/UX 최적화 기반 + 모든 기능 통합 + XLSM 지원', 'color: #059669;');
+</script>
+
+</body>
+</html>

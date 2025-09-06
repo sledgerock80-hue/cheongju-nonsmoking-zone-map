@@ -1,0 +1,2384 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>CLUSTRO 청주 금연구역 점검지도 - 네비게이션 통합판 v14.1 (Enhanced)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* 청주시 CI 색상을 반영한 현대적인 디자인 */
+    --primary: #1E40AF; /* 청주시 대표색상 */
+    --primary-light: #3B82F6;
+    --accent: #F59E0B; /* 강조색 */
+    --accent-light: #FCD34D;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    
+    --rail-w: 68px;
+    --side-w: 400px;
+    --gap: 8px;
+    --marker-size: 32px;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+    --transition: all 0.2s ease;
+  }
+
+  /* 오프라인/온라인 상태 표시 */
+  .online-status {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+  }
+  .online-status.online {
+    background: var(--success);
+    color: white;
+  }
+  .online-status.offline {
+    background: var(--danger);
+    color: white;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* 기본 스타일 리셋 및 개선 */
+  * { box-sizing: border-box; }
+  
+  body {
+    margin: 0;
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-800);
+    background: var(--gray-50);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 접근성 개선 */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  button, .btn {
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    font-family: inherit;
+  }
+
+  button:hover, .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+
+  button:active, .btn:active {
+    transform: translateY(0);
+  }
+
+  /* 레이아웃 그리드 */
+  #app {
+    display: grid;
+    min-height: 100vh;
+    grid-template-columns: var(--rail-w) var(--side-w) var(--gap) 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 
+      "rail toolbar toolbar toolbar" 
+      "rail sidebar gap main";
+  }
+
+  /* 상단 툴바 */
+  #toolbar {
+    grid-area: toolbar;
+    background: white;
+    border-bottom: 2px solid var(--gray-200);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* 좌측 레일 */
+  #rail {
+    grid-area: rail;
+    background: white;
+    border-right: 2px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px;
+    gap: 12px;
+  }
+
+  .logo-container {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: var(--shadow);
+  }
+
+  .nav-button {
+    width: 52px;
+    height: 52px;
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--gray-600);
+    font-size: 10px;
+    font-weight: 500;
+    title: 'tooltip';
+  }
+
+  .nav-button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+  }
+
+  .nav-button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .nav-button svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+  }
+
+  /* 사이드바 */
+  #sidebar {
+    grid-area: sidebar;
+    background: white;
+    border-right: 2px solid var(--gray-200);
+    overflow-y: auto;
+    font-size: 13px;
+  }
+
+  .section {
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .section-header {
+    padding: 16px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: var(--gray-700);
+    transition: var(--transition);
+  }
+
+  .section-header:hover {
+    background: var(--gray-100);
+  }
+
+  .section-content {
+    padding: 20px;
+  }
+
+  /* 버튼 스타일 개선 */
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--border-radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+    text-decoration: none;
+    cursor: pointer;
+    min-height: 36px;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    border: 2px solid var(--primary);
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+  }
+
+  .btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 2px solid var(--gray-200);
+  }
+
+  .btn-secondary:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border: 2px solid var(--accent);
+  }
+
+  .btn-accent:hover {
+    background: var(--accent-light);
+    border-color: var(--accent-light);
+  }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+    border: 2px solid var(--success);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+    border: 2px solid var(--danger);
+  }
+
+  /* 입력 요소 개선 */
+  input, select, textarea {
+    padding: 8px 12px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    background: white;
+    font-size: 13px;
+    transition: var(--transition);
+    min-height: 36px;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* 배지 스타일 */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .badge-primary {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  .badge-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+
+  .badge-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  /* 칩 스타일 */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .chip:hover {
+    background: var(--gray-200);
+  }
+
+  .chip input[type="checkbox"] {
+    margin: 0;
+    min-height: auto;
+  }
+
+  /* 스위치 스타일 개선 */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    min-height: auto;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gray-300);
+    transition: var(--transition);
+    border-radius: 28px;
+    border: 2px solid var(--gray-200);
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    top: 2px;
+    background: white;
+    transition: var(--transition);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .switch input:checked + .slider {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .switch input:checked + .slider:before {
+    transform: translateX(24px);
+  }
+
+  .switch input:indeterminate + .slider {
+    background: var(--warning);
+    border-color: var(--warning);
+  }
+
+  /* 갭 영역 */
+  #gap {
+    grid-area: gap;
+    background: var(--gray-200);
+    cursor: col-resize;
+    position: relative;
+  }
+
+  #gap:hover {
+    background: var(--primary-light);
+  }
+
+  #gap::after {
+    content: '⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gray-500);
+    font-size: 16px;
+  }
+
+  /* 메인 지도 영역 */
+  #main {
+    grid-area: main;
+    position: relative;
+    background: var(--gray-100);
+  }
+
+  #map {
+    position: absolute;
+    inset: 0;
+    border-radius: 0;
+  }
+
+  /* 지도 컨트롤 */
+  .map-controls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* 선택 패널 개선 - 드래그/리사이즈 지원 */
+  .selection-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: min(600px, 45vw);
+    max-width: 90vw;
+    max-height: 60vh;
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    display: none;
+    overflow: hidden;
+    resize: both;
+    min-width: 400px;
+    min-height: 300px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* 마커 숨김 클래스 */
+  .hidden-marker {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease;
+  }
+
+  /* A/B 포인트 마커 스타일 */
+  .ab-marker {
+    width: 30px !important;
+    height: 30px !important;
+    background: var(--danger) !important;
+    border: 3px solid white !important;
+    border-radius: 50% !important;
+    color: white !important;
+    font-weight: bold !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    z-index: 1000 !important;
+  }
+
+  /* 경로 폴리라인 스타일 */
+  .route-polyline {
+    color: var(--primary);
+    weight: 4;
+    opacity: 0.8;
+    dashArray: '10, 5';
+  }
+
+  .ab-route-polyline {
+    color: var(--danger);
+    weight: 3;
+    opacity: 0.9;
+    dashArray: '5, 5';
+  }
+
+  /* 클러스터 마커 스타일 개선 */
+  .marker-cluster-small {
+    background-color: rgba(59, 130, 246, 0.6);
+  }
+  .marker-cluster-small div {
+    background-color: rgba(59, 130, 246, 0.8);
+  }
+  .marker-cluster-medium {
+    background-color: rgba(245, 158, 11, 0.6);
+  }
+  .marker-cluster-medium div {
+    background-color: rgba(245, 158, 11, 0.8);
+  }
+  .marker-cluster-large {
+    background-color: rgba(239, 68, 68, 0.6);
+  }
+  .marker-cluster-large div {
+    background-color: rgba(239, 68, 68, 0.8);
+  }
+
+  /* 반응형 디자인 */
+  @media (max-width: 1024px) {
+    #app {
+      grid-template-columns: var(--rail-w) 1fr;
+      grid-template-areas: 
+        "rail toolbar" 
+        "rail main";
+    }
+    
+    #sidebar {
+      position: fixed;
+      left: var(--rail-w);
+      top: 0;
+      bottom: 0;
+      width: var(--side-w);
+      z-index: 3000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    
+    #sidebar.open {
+      transform: translateX(0);
+    }
+    
+    #gap {
+      display: none;
+    }
+  }
+
+  /* 다크모드 지원 */
+  body.dark {
+    --gray-50: #1F2937;
+    --gray-100: #374151;
+    --gray-200: #4B5563;
+    --gray-300: #6B7280;
+    --gray-800: #F9FAFB;
+    --gray-900: #F3F4F6;
+    background: var(--gray-50);
+    color: var(--gray-800);
+  }
+
+  /* 애니메이션 효과 */
+  @keyframes slideInUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .animate-slide-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  /* 로딩 상태 */
+  .loading {
+    position: relative;
+    pointer-events: none;
+  }
+
+  .loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-300);
+    border-top: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+</style>
+
+<!-- 외부 라이브러리 -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+</head>
+<body>
+<div class="online-status" id="onlineStatus">온라인</div>
+
+<div id="app">
+  <div id="rail">
+    <div class="logo-container">
+      청주시<br>금연구역
+    </div>
+    
+    <a href="#" class="nav-button active" id="dataTab" title="데이터 관리">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 00-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      <span>데이터</span>
+    </a>
+    
+    <a href="#" class="nav-button" id="filterTab" title="필터 및 검색">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+      </svg>
+      <span>필터</span>
+    </a>
+    
+    <a href="#" class="nav-button" id="routeTab" title="경로 계산">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+      </svg>
+      <span>경로</span>
+    </a>
+    
+    <a href="#" class="nav-button" id="exportTab" title="내보내기">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span>내보내기</span>
+    </a>
+    
+    <a href="#" class="nav-button" id="settingsTab" title="설정">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      <span>설정</span>
+    </a>
+    
+    <label class="switch" id="darkToggle" title="다크 모드">
+      <input type="checkbox" id="darkMode">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div id="toolbar">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <span class="badge badge-primary" id="totalCount">총: 0</span>
+      <span class="badge badge-success" id="shownCount">표시: 0</span>
+      <span class="badge badge-warning" id="missingCount">좌표없음: 0</span>
+      <span class="badge badge-danger" id="filteredCount">제외: 0</span>
+    </div>
+    
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+      <input type="search" id="searchInput" placeholder="시설명, 주소, 읍면동, 군집 검색..." 
+             style="width: 300px;" title="검색어 입력">
+      <button class="btn btn-primary" id="showSelectionPanel">📋 선택 목록 (0)</button>
+      <button class="btn btn-secondary" id="toggleSidebar" style="display: none;">☰ 메뉴</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <!-- 데이터 섹션 -->
+    <div class="section" id="dataSection">
+      <div class="section-header">
+        <span>📊 데이터 관리</span>
+        <span>▼</span>
+      </div>
+      <div class="section-content">
+        <div style="margin-bottom: 16px;">
+          <button class="btn btn-primary" id="fileInput" style="width: 100%;">
+            📁 엑셀/CSV 파일 업로드
+          </button>
+          <input type="file" id="hiddenFileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+        </div>
+        
+        <details style="margin-bottom: 16px;">
+          <summary style="cursor: pointer; padding: 8px 0; font-weight: 500;">
+            🔧 고급 설정
+          </summary>
+          <div style="margin-top: 12px; padding-left: 16px;">
+            <label style="display: block; margin-bottom: 8px;">
+              시트 선택:
+              <select id="sheetSelect" style="width: 100%; margin-top: 4px;"></select>
+            </label>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+              <label>
+                위도 열:
+                <select id="latColumn" style="width: 100%;">
+                  <option value="B">B (위도)</option>
+                  <option value="C">C</option>
+                  <option value="H" selected>H (위도)</option>
+                </select>
+              </label>
+              <label>
+                경도 열:
+                <select id="lngColumn" style="width: 100%;">
+                  <option value="C">C (경도)</option>
+                  <option value="D">D</option>
+                  <option value="G" selected>G (경도)</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <label class="chip">
+            <input type="checkbox" id="includeNoCoords">
+            <span>좌표 없는 데이터 포함</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" id="onlyUninspected">
+            <span>미점검만 표시</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 필터 섹션 -->
+    <div class="section" id="filterSection" style="display: none;">
+      <div class="section-header">
+        <span>🔍 필터 및 검색</span>
+        <span>▼</span>
+      </div>
+      <div class="section-content">
+        <div style="margin-bottom: 16px;">
+          <input type="search" id="searchInputSidebar" placeholder="검색..." style="width: 100%;">
+          <button class="btn btn-accent" id="addAllFiltered" style="width: 100%; margin-top: 8px;">
+            ➕ 필터결과 모두 선택목록에 추가
+          </button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 600;">군집별</span>
+            <label class="switch">
+              <input type="checkbox" id="clusterToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div id="clusterChips" class="chips"></div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 600;">읍면동별</span>
+            <label class="switch">
+              <input type="checkbox" id="districtToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div id="districtChips" class="chips"></div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 600;">카테고리별</span>
+            <label class="switch">
+              <input type="checkbox" id="categoryToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div id="categoryChips" class="chips"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 경로 섹션 -->
+    <div class="section" id="routeSection" style="display: none;">
+      <div class="section-header">
+        <span>🗺️ 경로 계산</span>
+        <span>▼</span>
+      </div>
+      <div class="section-content">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">
+            경로 알고리즘:
+            <select id="routeAlgorithm" style="width: 100%; margin-top: 4px;">
+              <option value="nearest">최근접 이웃</option>
+              <option value="tsp">TSP 최적화</option>
+              <option value="cluster">클러스터 기반</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">
+            일일 최대 방문지:
+            <input type="number" id="dailyLimit" value="50" min="1" max="200" style="width: 100%;">
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+          <label class="chip">
+            <input type="checkbox" id="fixEnds">
+            <span>시작/끝 고정</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" id="toggleHideNonRoute">
+            <span>경로외 마커 숨기기</span>
+          </label>
+        </div>
+
+        <button class="btn btn-primary" id="calculateRoute" style="width: 100%;">
+          🎯 경로 계산
+        </button>
+
+        <div style="margin-top: 16px; padding: 12px; background: var(--gray-50); border-radius: var(--border-radius-sm);">
+          <div id="routeStats" style="display: none;">
+            <div style="font-size: 12px; color: var(--gray-600);">경로 정보:</div>
+            <div style="font-weight: 600; margin-top: 4px;">
+              <span id="routeDistance">0km</span> · 
+              <span id="routeTime">0분</span> · 
+              <span id="routeCount">0곳</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn btn-accent" id="pickAB" style="width: 100%;">
+            📍 지도에서 A/B 선택
+          </button>
+          <button class="btn btn-secondary" id="clearAB" style="width: 100%; margin-top: 8px; display: none;">
+            🔄 A/B 경로 초기화
+          </button>
+          <div id="abInfo" style="margin-top: 8px; font-size: 12px; color: var(--gray-600);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내보내기 섹션 -->
+    <div class="section" id="exportSection" style="display: none;">
+      <div class="section-header">
+        <span>💾 내보내기</span>
+        <span>▼</span>
+      </div>
+      <div class="section-content">
+        <div style="margin-bottom: 16px;">
+          <button class="btn btn-success" id="exportExcel" style="width: 100%;">
+            📗 Excel 내보내기
+          </button>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <button class="btn btn-danger" id="exportPDF" style="width: 100%;">
+            📕 PDF 내보내기
+          </button>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <button class="btn btn-primary" id="exportImage" style="width: 100%;">
+            🖼️ 이미지 내보내기
+          </button>
+        </div>
+
+        <div>
+          <label class="chip">
+            <input type="checkbox" id="exportHighQuality">
+            <span>고화질 출력</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 설정 섹션 -->
+    <div class="section" id="settingsSection" style="display: none;">
+      <div class="section-header">
+        <span>⚙️ 설정</span>
+        <span>▼</span>
+      </div>
+      <div class="section-content">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">
+            지도 배경:
+            <select id="mapStyle" style="width: 100%; margin-top: 4px;">
+              <option value="vworld" selected>VWorld 지도</option>
+              <option value="none">배경지도 없음</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">
+            마커 스타일:
+            <select id="markerStyle" style="width: 100%; margin-top: 4px;">
+              <option value="circle">원형</option>
+              <option value="square">사각형</option>
+              <option value="pin">말풍선</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">
+            마커 크기:
+            <input type="range" id="markerSize" min="16" max="48" value="32" style="width: 100%;">
+            <span id="markerSizeValue">32px</span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <label class="chip">
+            <input type="checkbox" id="clusterMarkers">
+            <span>마커 클러스터링</span>
+          </label>
+          <label class="chip">
+            <input type="checkbox" id="showLabels">
+            <span>라벨 표시</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gap"></div>
+
+  <div id="main">
+    <div class="map-controls">
+      <button class="btn btn-secondary" id="fitToMarkers" title="전체 보기">🔍</button>
+      <button class="btn btn-secondary" id="refreshMap" title="새로고침">🔄</button>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<!-- 선택 목록 패널 -->
+<div class="selection-panel" id="selectionPanel">
+  <div style="padding: 16px 20px; border-bottom: 1px solid var(--gray-200); background: var(--gray-50); display: flex; justify-content: between; align-items: center;">
+    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">📋 선택 목록</h3>
+    <div>
+      <button class="btn btn-accent" id="exportSelection" style="margin-right: 8px;">📗 선택항목 내보내기</button>
+      <button class="btn btn-danger" id="clearSelection">🗑 모두 삭제</button>
+    </div>
+  </div>
+  <div style="flex: 1; overflow-y: auto; padding: 0;">
+    <table id="selectionTable" style="width: 100%; font-size: 12px; border-collapse: collapse;">
+      <thead>
+        <tr style="background: var(--gray-100); position: sticky; top: 0;">
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">ID</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">시설명</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">주소</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">카테고리</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">군집</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">순서</th>
+          <th style="padding: 8px; text-align: left; border-bottom: 1px solid var(--gray-200);">액션</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  class CheongJuInspectionMap {
+    constructor() {
+      this.map = null;
+      this.data = [];
+      this.filteredData = [];
+      this.markers = new Map();
+      this.selectedMarkers = new Set();
+      this.currentRoute = [];
+      this.routePolyline = null;
+      this.clusterLayer = null;
+      this.dataLayer = null;
+      this.useClusterMode = false;
+      
+      // A/B 경로 기능
+      this.ABpoints = [];
+      this.ABmarkers = [];
+      this.ABpolyline = null;
+      this.ABmode = false;
+
+      this.init();
+    }
+
+    async init() {
+      this.setupMap();
+      this.setupEventListeners();
+      this.setupKeyboardNavigation();
+      this.setupOnlineStatus();
+      this.loadSampleData();
+      this.updateUI();
+    }
+
+    setupMap() {
+      // 지도 초기화
+      this.map = L.map('map', {
+        center: [36.6372, 127.4897], // 청주시 좌표
+        zoom: 12,
+        zoomControl: true,
+        preferCanvas: true
+      });
+
+      // 기본 타일 레이어 (VWorld)
+      L.tileLayer('http://api.vworld.kr/req/wmts/1.0.0/D3363E9B-42C1-3E23-9DD1-5618F78E8D33/Base/{z}/{y}/{x}.png', {
+        attribution: '© VWorld',
+        maxZoom: 18
+      }).addTo(this.map);
+
+      // 클러스터 그룹과 일반 레이어 그룹 생성
+      this.clusterLayer = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount();
+          let className = 'marker-cluster-small';
+          if (count >= 10) className = 'marker-cluster-medium';
+          if (count >= 50) className = 'marker-cluster-large';
+          
+          return L.divIcon({
+            html: '<div><span>' + count + '</span></div>',
+            className: 'marker-cluster ' + className,
+            iconSize: L.point(40, 40)
+          });
+        }
+      });
+      
+      this.dataLayer = L.layerGroup();
+      this.dataLayer.addTo(this.map);
+    }
+
+    setupEventListeners() {
+      // 네비게이션 탭
+      document.querySelectorAll('.nav-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetId = btn.id.replace('Tab', 'Section');
+          this.showSection(targetId);
+          
+          // 활성 상태 업데이트
+          document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // 파일 업로드
+      document.getElementById('fileInput').addEventListener('click', () => {
+        document.getElementById('hiddenFileInput').click();
+      });
+      
+      document.getElementById('hiddenFileInput').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          this.loadFile(e.target.files[0]);
+        }
+      });
+
+      // 검색 기능
+      document.getElementById('searchInput').addEventListener('input', () => {
+        this.applyFilters();
+      });
+      
+      document.getElementById('searchInputSidebar').addEventListener('input', (e) => {
+        document.getElementById('searchInput').value = e.target.value;
+        this.applyFilters();
+      });
+
+      // 필터 체크박스들
+      document.getElementById('includeNoCoords').addEventListener('change', () => {
+        this.applyFilters();
+      });
+      
+      document.getElementById('onlyUninspected').addEventListener('change', () => {
+        this.applyFilters();
+      });
+
+      // 경로 계산
+      document.getElementById('calculateRoute').addEventListener('click', () => {
+        this.calculateRoute();
+      });
+
+      // 선택 목록 패널
+      document.getElementById('showSelectionPanel').addEventListener('click', () => {
+        const panel = document.getElementById('selectionPanel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+        if (panel.style.display === 'block') {
+          this.updateSelectionPanel();
+        }
+      });
+
+      document.getElementById('clearSelection').addEventListener('click', () => {
+        this.clearSelection();
+      });
+
+      document.getElementById('exportSelection').addEventListener('click', () => {
+        this.exportSelection();
+      });
+
+      // 내보내기 기능들
+      document.getElementById('exportExcel').addEventListener('click', () => {
+        this.exportToExcel();
+      });
+      
+      document.getElementById('exportPDF').addEventListener('click', () => {
+        this.exportToPDF();
+      });
+      
+      document.getElementById('exportImage').addEventListener('click', () => {
+        this.exportToImage();
+      });
+
+      // 지도 컨트롤
+      document.getElementById('fitToMarkers').addEventListener('click', () => {
+        this.fitToMarkers();
+      });
+      
+      document.getElementById('refreshMap').addEventListener('click', () => {
+        this.refreshMap();
+      });
+
+      // 다크모드 토글
+      document.getElementById('darkMode').addEventListener('change', (e) => {
+        document.body.classList.toggle('dark', e.target.checked);
+      });
+
+      // 마커 크기 슬라이더
+      document.getElementById('markerSize').addEventListener('input', (e) => {
+        document.getElementById('markerSizeValue').textContent = e.target.value + 'px';
+        document.documentElement.style.setProperty('--marker-size', e.target.value + 'px');
+      });
+
+      // 설정 변경 이벤트들
+      document.getElementById('clusterMarkers').addEventListener('change', (e) => {
+        this.toggleClusterMode(e.target.checked);
+      });
+
+      document.getElementById('showLabels').addEventListener('change', () => {
+        this.updateMarkers();
+      });
+
+      // A/B 경로 기능
+      document.getElementById('pickAB').addEventListener('click', () => {
+        this.startABMode();
+      });
+      
+      document.getElementById('clearAB').addEventListener('click', () => {
+        this.clearABRoute();
+      });
+
+      // 필터결과 모두 추가
+      document.getElementById('addAllFiltered').addEventListener('click', () => {
+        this.addAllFilteredToSelection();
+      });
+
+      // 경로 외 마커 숨김 토글
+      document.getElementById('toggleHideNonRoute').addEventListener('change', () => {
+        this.toggleHideNonRouteMarkers();
+      });
+
+      // 필터 토글들
+      document.getElementById('clusterToggle').addEventListener('change', () => {
+        this.toggleAllChips('clusterChips', document.getElementById('clusterToggle').checked);
+      });
+      
+      document.getElementById('districtToggle').addEventListener('change', () => {
+        this.toggleAllChips('districtChips', document.getElementById('districtToggle').checked);
+      });
+      
+      document.getElementById('categoryToggle').addEventListener('change', () => {
+        this.toggleAllChips('categoryChips', document.getElementById('categoryToggle').checked);
+      });
+    }
+
+    showSection(sectionId) {
+      // 모든 섹션 숨기기
+      document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+      });
+      
+      // 해당 섹션만 보이기
+      const targetSection = document.getElementById(sectionId);
+      if (targetSection) {
+        targetSection.style.display = 'block';
+      }
+    }
+
+    async loadFile(file) {
+      try {
+        const data = await this.readFile(file);
+        let workbook;
+        
+        if (file.name.endsWith('.csv')) {
+          // CSV 처리
+          const text = new TextDecoder('utf-8').decode(data);
+          workbook = XLSX.read(text, { type: 'string' });
+        } else {
+          // Excel 처리
+          workbook = XLSX.read(data, { type: 'array' });
+        }
+        
+        // 시트 목록 업데이트
+        const sheetSelect = document.getElementById('sheetSelect');
+        sheetSelect.innerHTML = '';
+        workbook.SheetNames.forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          sheetSelect.appendChild(option);
+        });
+        
+        // 첫 번째 시트 로드
+        this.processWorksheet(workbook.Sheets[workbook.SheetNames[0]]);
+        
+      } catch (error) {
+        console.error('파일 로드 실패:', error);
+        alert('파일을 읽을 수 없습니다: ' + error.message);
+      }
+    }
+
+    readFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(new Uint8Array(e.target.result));
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    processWorksheet(worksheet) {
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      // 데이터 매핑
+      this.data = jsonData.slice(1).map((row, index) => {
+        const item = {
+          id: `item_${index + 1}`,
+          name: row[9] || `항목 ${index + 1}`, // J열 (시설명)
+          addr: row[17] || '', // R열 (주소)  
+          category: row[4] || '일반', // E열 (카테고리)
+          district: row[20] || '', // U열 (읍면동)
+          cluster: row[18] || '1', // S열 (군집)
+          inspectionDate: row[1] || '', // B열 (점검일)
+          lat: parseFloat(row[7]) || null, // H열 (위도)
+          lng: parseFloat(row[6]) || null, // G열 (경도)
+        };
+        
+        return item;
+      }).filter(item => item.name); // 시설명이 있는 항목만
+      
+      console.log(`데이터 로드 완료: ${this.data.length}개 항목`);
+      
+      this.buildFilterChips();
+      this.applyFilters();
+      this.updateMarkers();
+      this.updateUI();
+    }
+
+    buildFilterChips() {
+      // 군집 칩 생성
+      const clusters = [...new Set(this.data.map(item => item.cluster))].sort();
+      this.buildChips('clusterChips', clusters, 'cluster');
+      
+      // 읍면동 칩 생성
+      const districts = [...new Set(this.data.map(item => item.district))].filter(d => d).sort();
+      this.buildChips('districtChips', districts, 'district');
+      
+      // 카테고리 칩 생성
+      const categories = [...new Set(this.data.map(item => item.category))].filter(c => c).sort();
+      this.buildChips('categoryChips', categories, 'category');
+    }
+
+    buildChips(containerId, values, filterType) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      
+      values.forEach(value => {
+        const chip = document.createElement('label');
+        chip.className = 'chip';
+        chip.innerHTML = `
+          <input type="checkbox" checked data-filter="${filterType}" data-value="${value}">
+          <span>${value}</span>
+        `;
+        container.appendChild(chip);
+      });
+      
+      // 이벤트 리스너 추가
+      container.addEventListener('change', () => {
+        this.applyFilters();
+        this.updateToggleStates();
+      });
+    }
+
+    toggleAllChips(containerId, checked) {
+      const container = document.getElementById(containerId);
+      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = checked);
+      this.applyFilters();
+    }
+
+    updateToggleStates() {
+      // 각 토글의 상태를 실제 체크박스 상태에 맞춰 업데이트
+      this.updateToggleState('clusterToggle', 'clusterChips');
+      this.updateToggleState('districtToggle', 'districtChips'); 
+      this.updateToggleState('categoryToggle', 'categoryChips');
+    }
+
+    updateToggleState(toggleId, chipsId) {
+      const toggle = document.getElementById(toggleId);
+      const chips = document.getElementById(chipsId);
+      const checkboxes = chips.querySelectorAll('input[type="checkbox"]');
+      
+      const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+      const totalCount = checkboxes.length;
+      
+      if (checkedCount === totalCount) {
+        toggle.checked = true;
+        toggle.indeterminate = false;
+      } else if (checkedCount === 0) {
+        toggle.checked = false;
+        toggle.indeterminate = false;
+      } else {
+        toggle.checked = false;
+        toggle.indeterminate = true;
+      }
+    }
+
+    applyFilters() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+      const includeNoCoords = document.getElementById('includeNoCoords').checked;
+      const onlyUninspected = document.getElementById('onlyUninspected').checked;
+      
+      // 선택된 필터값들 수집
+      const selectedClusters = new Set();
+      const selectedDistricts = new Set();
+      const selectedCategories = new Set();
+      
+      // 검색어가 있을 때 자동 필터링 로직 개선
+      if (searchTerm) {
+        this.applySearchBasedFiltering(searchTerm, selectedClusters, selectedDistricts, selectedCategories);
+      } else {
+        // 일반적인 칩 기반 필터링
+        this.collectSelectedFilters(selectedClusters, selectedDistricts, selectedCategories);
+      }
+      
+      // 필터 적용
+      this.filteredData = this.data.filter(item => {
+        // 검색어 필터
+        if (searchTerm) {
+          const searchableText = `${item.name} ${item.addr} ${item.district} ${item.cluster} ${item.category}`.toLowerCase();
+          if (!searchableText.includes(searchTerm)) return false;
+        }
+        
+        // 좌표 필터
+        if (!includeNoCoords && (!item.lat || !item.lng)) return false;
+        
+        // 점검 상태 필터
+        if (onlyUninspected && item.inspectionDate) return false;
+        
+        // 선택된 필터 기준으로 필터링
+        if (selectedClusters.size > 0 && !selectedClusters.has(item.cluster)) return false;
+        if (selectedDistricts.size > 0 && !selectedDistricts.has(item.district)) return false;
+        if (selectedCategories.size > 0 && !selectedCategories.has(item.category)) return false;
+        
+        return true;
+      });
+      
+      this.updateMarkers();
+      this.updateUI();
+      this.updateToggleStates();
+    }
+
+    applySearchBasedFiltering(searchTerm, selectedClusters, selectedDistricts, selectedCategories) {
+      // 검색어 토큰 분리
+      const emdTokens = searchTerm.match(/[가-힣]+/g) || [];
+      const clusterTokens = searchTerm.match(/\d+/g) || [];
+      
+      // 모든 값들을 기본적으로 선택
+      const allClusters = [...new Set(this.data.map(item => item.cluster))];
+      const allDistricts = [...new Set(this.data.map(item => item.district))].filter(d => d);
+      const allCategories = [...new Set(this.data.map(item => item.category))].filter(c => c);
+      
+      allClusters.forEach(c => selectedClusters.add(c));
+      allDistricts.forEach(d => selectedDistricts.add(d));
+      allCategories.forEach(c => selectedCategories.add(c));
+      
+      // 한글 토큰이 있으면 매칭되는 읍면동만 선택
+      if (emdTokens.length > 0) {
+        selectedDistricts.clear();
+        allDistricts.forEach(district => {
+          if (emdTokens.some(token => district.includes(token))) {
+            selectedDistricts.add(district);
+          }
+        });
+      }
+      
+      // 숫자 토큰이 있으면 매칭되는 군집만 선택
+      if (clusterTokens.length > 0) {
+        selectedClusters.clear();
+        clusterTokens.forEach(token => {
+          if (allClusters.includes(token)) {
+            selectedClusters.add(token);
+          }
+        });
+      }
+    }
+
+    collectSelectedFilters(selectedClusters, selectedDistricts, selectedCategories) {
+      document.querySelectorAll('#clusterChips input:checked').forEach(cb => {
+        selectedClusters.add(cb.dataset.value);
+      });
+      
+      document.querySelectorAll('#districtChips input:checked').forEach(cb => {
+        selectedDistricts.add(cb.dataset.value);
+      });
+      
+      document.querySelectorAll('#categoryChips input:checked').forEach(cb => {
+        selectedCategories.add(cb.dataset.value);
+      });
+    }
+
+    updateMarkers() {
+      // 기존 마커들 제거
+      this.clearAllMarkers();
+      
+      // 표시할 데이터의 좌표가 있는 항목들만 처리
+      const validItems = this.filteredData.filter(item => item.lat && item.lng);
+      
+      validItems.forEach(item => {
+        const marker = this.createMarker(item);
+        this.markers.set(item.id, marker);
+        
+        // 현재 클러스터 모드에 따라 적절한 레이어에 추가
+        if (this.useClusterMode) {
+          this.clusterLayer.addLayer(marker);
+        } else {
+          this.dataLayer.addLayer(marker);
+        }
+      });
+      
+      // 경로 외 마커 숨김 상태 적용
+      if (document.getElementById('toggleHideNonRoute').checked) {
+        this.toggleHideNonRouteMarkers();
+      }
+    }
+
+    clearAllMarkers() {
+      this.dataLayer.clearLayers();
+      this.clusterLayer.clearLayers();
+      this.markers.clear();
+    }
+
+    createMarker(item) {
+      const markerStyle = document.getElementById('markerStyle').value;
+      const showLabels = document.getElementById('showLabels').checked;
+      const size = parseInt(document.getElementById('markerSize').value);
+      
+      let markerHtml;
+      switch (markerStyle) {
+        case 'square':
+          markerHtml = `<div style="width: ${size}px; height: ${size}px; background: var(--primary); border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${item.cluster}</div>`;
+          break;
+        case 'pin':
+          markerHtml = `<div style="width: ${size}px; height: ${size}px; background: var(--primary); border: 2px solid white; border-radius: 50% 50% 50% 0; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transform: rotate(-45deg);"><span style="transform: rotate(45deg);">${item.cluster}</span></div>`;
+          break;
+        default: // circle
+          markerHtml = `<div style="width: ${size}px; height: ${size}px; background: var(--primary); border: 2px solid white; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${item.cluster}</div>`;
+      }
+      
+      const marker = L.marker([item.lat, item.lng], {
+        icon: L.divIcon({
+          html: markerHtml,
+          className: 'custom-marker',
+          iconSize: [size, size],
+          iconAnchor: [size/2, size/2]
+        })
+      });
+      
+      // 마커 클릭 이벤트
+      marker.on('click', () => {
+        if (this.ABmode) {
+          this.addABPoint([item.lat, item.lng]);
+          return;
+        }
+        
+        if (this.selectedMarkers.has(item.id)) {
+          this.removeFromSelection(item.id);
+        } else {
+          this.addToSelection(item.id);
+        }
+      });
+      
+      // 팝업 설정
+      const popupContent = `
+        <div style="min-width: 200px;">
+          <h4 style="margin: 0 0 8px 0; color: var(--primary);">${item.name}</h4>
+          <p style="margin: 4px 0; font-size: 12px;"><strong>주소:</strong> ${item.addr}</p>
+          <p style="margin: 4px 0; font-size: 12px;"><strong>업종:</strong> ${item.category}</p>
+          <p style="margin: 4px 0; font-size: 12px;"><strong>읍면동:</strong> ${item.district}</p>
+          <p style="margin: 4px 0; font-size: 12px;"><strong>군집:</strong> ${item.cluster}</p>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button onclick="app.addToSelection('${item.id}')" class="btn btn-primary" style="font-size: 11px; padding: 4px 8px;">선택 추가</button>
+            <button onclick="app.openNavigation('${item.lat}', '${item.lng}', '${item.name}')" class="btn btn-accent" style="font-size: 11px; padding: 4px 8px;">길찾기</button>
+          </div>
+        </div>
+      `;
+      
+      marker.bindPopup(popupContent);
+      
+      // 라벨 표시
+      if (showLabels) {
+        marker.bindTooltip(item.name, {
+          permanent: true,
+          direction: 'top',
+          className: 'marker-label',
+          opacity: 0.9
+        });
+      }
+      
+      // 마커에 데이터 ID 저장
+      marker.getElement().dataset.id = item.id;
+      
+      return marker;
+    }
+
+    addToSelection(itemId) {
+      const item = this.data.find(i => i.id === itemId);
+      if (!item) return;
+      
+      const dailyLimit = parseInt(document.getElementById('dailyLimit').value) || 50;
+      
+      if (this.selectedMarkers.size >= dailyLimit) {
+        alert(`일일 최대 방문지(${dailyLimit}개)를 초과할 수 없습니다.`);
+        return;
+      }
+      
+      this.selectedMarkers.add(itemId);
+      
+      // 마커 시각적 표시 업데이트
+      const marker = this.markers.get(itemId);
+      if (marker) {
+        marker.getElement().classList.add('selected');
+        marker.getElement().style.transform = 'scale(1.2)';
+        marker.getElement().style.zIndex = '1000';
+      }
+      
+      this.updateSelectionPanel();
+      this.updateUI();
+      
+      // 2개 이상 선택되면 자동 경로 계산
+      if (this.selectedMarkers.size >= 2) {
+        this.calculateRoute();
+      }
+    }
+
+    removeFromSelection(itemId) {
+      this.selectedMarkers.delete(itemId);
+      
+      // 마커 시각적 표시 제거
+      const marker = this.markers.get(itemId);
+      if (marker) {
+        marker.getElement().classList.remove('selected');
+        marker.getElement().style.transform = '';
+        marker.getElement().style.zIndex = '';
+      }
+      
+      this.updateSelectionPanel();
+      this.updateUI();
+      
+      // 경로 재계산
+      if (this.selectedMarkers.size >= 2) {
+        this.calculateRoute();
+      } else {
+        this.clearRoute();
+      }
+    }
+
+    clearSelection() {
+      // 모든 마커의 선택 상태 제거
+      this.selectedMarkers.forEach(itemId => {
+        const marker = this.markers.get(itemId);
+        if (marker) {
+          marker.getElement().classList.remove('selected');
+          marker.getElement().style.transform = '';
+          marker.getElement().style.zIndex = '';
+        }
+      });
+      
+      this.selectedMarkers.clear();
+      this.clearRoute();
+      this.updateSelectionPanel();
+      this.updateUI();
+    }
+
+    updateSelectionPanel() {
+      const tbody = document.querySelector('#selectionTable tbody');
+      tbody.innerHTML = '';
+      
+      const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id));
+      
+      selectedItems.forEach((item, index) => {
+        const routeIndex = this.currentRoute.findIndex(r => r.id === item.id);
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid var(--gray-200)';
+        
+        row.innerHTML = `
+          <td style="padding: 8px; font-weight: 600;">${item.id}</td>
+          <td style="padding: 8px;">${item.name}</td>
+          <td style="padding: 8px; font-size: 11px;">${item.addr}</td>
+          <td style="padding: 8px;">${item.category}</td>
+          <td style="padding: 8px; text-align: center;">${item.cluster}</td>
+          <td style="padding: 8px; text-align: center;">${routeIndex >= 0 ? routeIndex + 1 : '-'}</td>
+          <td style="padding: 8px;">
+            <button onclick="app.removeFromSelection('${item.id}')" class="btn btn-danger" style="font-size: 10px; padding: 2px 6px;">삭제</button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
+
+    async calculateRoute() {
+      if (this.selectedMarkers.size < 2) {
+        alert('최소 2개 이상의 지점을 선택해야 합니다.');
+        return;
+      }
+      
+      const button = document.getElementById('calculateRoute');
+      const originalText = button.textContent;
+      button.textContent = '계산 중...';
+      button.classList.add('loading');
+      
+      try {
+        const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id) && item.lat && item.lng);
+        const algorithm = document.getElementById('routeAlgorithm').value;
+        const fixEnds = document.getElementById('fixEnds').checked;
+        
+        let orderedRoute;
+        
+        switch (algorithm) {
+          case 'tsp':
+            orderedRoute = await this.solveTSP(selectedItems, fixEnds);
+            break;
+          case 'cluster':
+            orderedRoute = this.clusterBasedRoute(selectedItems, fixEnds);
+            break;
+          default: // nearest
+            orderedRoute = this.nearestNeighborRoute(selectedItems, fixEnds);
+        }
+        
+        this.currentRoute = orderedRoute;
+        this.drawRoute();
+        this.updateRouteStats();
+        this.updateSelectionPanel();
+        
+        // 경로 외 마커 숨김 처리
+        if (document.getElementById('toggleHideNonRoute').checked) {
+          this.toggleHideNonRouteMarkers();
+        }
+        
+      } catch (error) {
+        console.error('경로 계산 실패:', error);
+        alert('경로 계산에 실패했습니다.');
+      } finally {
+        button.textContent = originalText;
+        button.classList.remove('loading');
+      }
+    }
+
+    nearestNeighborRoute(points, fixEnds = false) {
+      if (points.length === 0) return [];
+      
+      const route = [];
+      const remaining = [...points];
+      
+      // 시작점 결정
+      let current;
+      if (fixEnds && points.length >= 2) {
+        current = remaining.shift(); // 첫 번째를 시작점으로
+      } else {
+        current = remaining.splice(0, 1)[0]; // 첫 번째 점부터 시작
+      }
+      
+      route.push(current);
+      
+      // 최근접 이웃으로 경로 구성
+      while (remaining.length > 1 || (remaining.length === 1 && !fixEnds)) {
+        let nearestIndex = 0;
+        let minDistance = this.calculateDistance(current, remaining[0]);
+        
+        for (let i = 1; i < remaining.length; i++) {
+          const distance = this.calculateDistance(current, remaining[i]);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestIndex = i;
+          }
+        }
+        
+        current = remaining.splice(nearestIndex, 1)[0];
+        route.push(current);
+      }
+      
+      // 끝점 고정
+      if (fixEnds && remaining.length === 1) {
+        route.push(remaining[0]);
+      }
+      
+      return route;
+    }
+
+    clusterBasedRoute(points, fixEnds = false) {
+      // 군집별로 그룹핑
+      const clusters = {};
+      points.forEach(point => {
+        if (!clusters[point.cluster]) {
+          clusters[point.cluster] = [];
+        }
+        clusters[point.cluster].push(point);
+      });
+      
+      // 각 클러스터 내에서 최근접 이웃 적용
+      const route = [];
+      Object.keys(clusters).sort().forEach(clusterKey => {
+        const clusterPoints = clusters[clusterKey];
+        const clusterRoute = this.nearestNeighborRoute(clusterPoints, false);
+        route.push(...clusterRoute);
+      });
+      
+      return route;
+    }
+
+    async solveTSP(points, fixEnds = false) {
+      // 간단한 2-opt 최적화를 적용한 TSP 해법
+      let route = this.nearestNeighborRoute(points, fixEnds);
+      
+      // 2-opt 개선
+      let improved = true;
+      while (improved) {
+        improved = false;
+        
+        for (let i = 1; i < route.length - 2; i++) {
+          for (let j = i + 1; j < route.length - 1; j++) {
+            if (fixEnds && (i === 0 || j === route.length - 2)) continue;
+            
+            const currentDistance = 
+              this.calculateDistance(route[i-1], route[i]) +
+              this.calculateDistance(route[j], route[j+1]);
+            
+            const newDistance =
+              this.calculateDistance(route[i-1], route[j]) +
+              this.calculateDistance(route[i], route[j+1]);
+            
+            if (newDistance < currentDistance) {
+              // 경로 순서 뒤집기
+              const newRoute = [
+                ...route.slice(0, i),
+                ...route.slice(i, j + 1).reverse(),
+                ...route.slice(j + 1)
+              ];
+              route = newRoute;
+              improved = true;
+            }
+          }
+        }
+      }
+      
+      return route;
+    }
+
+    calculateDistance(point1, point2) {
+      const R = 6371; // 지구 반지름 (km)
+      const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+      const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    drawRoute() {
+      // 기존 경로 제거
+      if (this.routePolyline) {
+        this.map.removeLayer(this.routePolyline);
+      }
+      
+      if (this.currentRoute.length < 2) return;
+      
+      const routeCoords = this.currentRoute.map(item => [item.lat, item.lng]);
+      
+      this.routePolyline = L.polyline(routeCoords, {
+        color: 'var(--primary)',
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '10, 5',
+        className: 'route-polyline'
+      }).addTo(this.map);
+      
+      // 경로에 순서 표시
+      this.currentRoute.forEach((item, index) => {
+        const marker = this.markers.get(item.id);
+        if (marker) {
+          const element = marker.getElement();
+          if (element) {
+            const orderLabel = document.createElement('div');
+            orderLabel.className = 'route-order-label';
+            orderLabel.style.cssText = `
+              position: absolute;
+              top: -8px;
+              right: -8px;
+              background: var(--accent);
+              color: white;
+              border-radius: 50%;
+              width: 18px;
+              height: 18px;
+              font-size: 10px;
+              font-weight: bold;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            `;
+            orderLabel.textContent = index + 1;
+            
+            // 기존 순서 라벨 제거
+            const existingLabel = element.querySelector('.route-order-label');
+            if (existingLabel) {
+              existingLabel.remove();
+            }
+            
+            element.appendChild(orderLabel);
+          }
+        }
+      });
+    }
+
+    clearRoute() {
+      if (this.routePolyline) {
+        this.map.removeLayer(this.routePolyline);
+        this.routePolyline = null;
+      }
+      
+      // 순서 라벨 제거
+      this.markers.forEach(marker => {
+        const element = marker.getElement();
+        if (element) {
+          const label = element.querySelector('.route-order-label');
+          if (label) {
+            label.remove();
+          }
+        }
+      });
+      
+      this.currentRoute = [];
+      document.getElementById('routeStats').style.display = 'none';
+    }
+
+    updateRouteStats() {
+      if (this.currentRoute.length < 2) return;
+      
+      let totalDistance = 0;
+      for (let i = 0; i < this.currentRoute.length - 1; i++) {
+        totalDistance += this.calculateDistance(this.currentRoute[i], this.currentRoute[i + 1]);
+      }
+      
+      const estimatedTime = Math.ceil(totalDistance / 30 * 60); // 30km/h 가정, 분 단위
+      
+      document.getElementById('routeDistance').textContent = `${totalDistance.toFixed(1)}km`;
+      document.getElementById('routeTime').textContent = `${estimatedTime}분`;
+      document.getElementById('routeCount').textContent = `${this.currentRoute.length}곳`;
+      document.getElementById('routeStats').style.display = 'block';
+    }
+
+    // A/B 경로 측정 기능
+    startABMode() {
+      this.ABmode = true;
+      this.clearABRoute();
+      
+      document.getElementById('abInfo').textContent = 'A/B: 지도에서 두 지점을 클릭하세요';
+      document.getElementById('pickAB').style.display = 'none';
+      document.getElementById('clearAB').style.display = 'block';
+      
+      // 지도 커서 변경
+      this.map.getContainer().style.cursor = 'crosshair';
+    }
+
+    addABPoint(latlng) {
+      if (this.ABpoints.length >= 2) return;
+      
+      this.ABpoints.push(latlng);
+      
+      // A/B 마커 생성
+      const label = this.ABpoints.length === 1 ? 'A' : 'B';
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({
+          html: `<div class="ab-marker">${label}</div>`,
+          className: '',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(this.map);
+      
+      this.ABmarkers.push(marker);
+      
+      document.getElementById('abInfo').textContent = `A/B: ${this.ABpoints.length}개 선택됨`;
+      
+      if (this.ABpoints.length === 2) {
+        this.calculateABRoute();
+        this.ABmode = false;
+        this.map.getContainer().style.cursor = '';
+      }
+    }
+
+    calculateABRoute() {
+      if (this.ABpoints.length !== 2) return;
+      
+      // 직선 거리 계산
+      const distance = this.calculateDistance(
+        {lat: this.ABpoints[0][0], lng: this.ABpoints[0][1]},
+        {lat: this.ABpoints[1][0], lng: this.ABpoints[1][1]}
+      );
+      
+      // 경로선 그리기
+      this.ABpolyline = L.polyline(this.ABpoints, {
+        color: 'var(--danger)',
+        weight: 3,
+        opacity: 0.9,
+        dashArray: '5, 5',
+        className: 'ab-route-polyline'
+      }).addTo(this.map);
+      
+      // 결과 표시
+      document.getElementById('abInfo').innerHTML = `
+        <strong>A/B 거리:</strong> ${distance.toFixed(2)}km<br>
+        <small>직선거리 기준</small>
+      `;
+    }
+
+    clearABRoute() {
+      // A/B 마커 제거
+      this.ABmarkers.forEach(marker => {
+        this.map.removeLayer(marker);
+      });
+      this.ABmarkers = [];
+      
+      // A/B 경로선 제거
+      if (this.ABpolyline) {
+        this.map.removeLayer(this.ABpolyline);
+        this.ABpolyline = null;
+      }
+      
+      this.ABpoints = [];
+      this.ABmode = false;
+      
+      document.getElementById('abInfo').textContent = '';
+      document.getElementById('pickAB').style.display = 'block';
+      document.getElementById('clearAB').style.display = 'none';
+      
+      this.map.getContainer().style.cursor = '';
+    }
+
+    // 필터결과 모두 선택목록에 추가
+    addAllFilteredToSelection() {
+      const validItems = this.filteredData.filter(item => item.lat && item.lng);
+      const dailyLimit = parseInt(document.getElementById('dailyLimit').value) || 50;
+      
+      if (validItems.length === 0) {
+        alert('추가할 수 있는 항목이 없습니다.');
+        return;
+      }
+      
+      // 일일 한도 체크
+      const availableSlots = dailyLimit - this.selectedMarkers.size;
+      if (availableSlots <= 0) {
+        alert('일일 최대 방문지 한도에 도달했습니다.');
+        return;
+      }
+      
+      const itemsToAdd = validItems.slice(0, availableSlots);
+      let addedCount = 0;
+      
+      itemsToAdd.forEach(item => {
+        if (!this.selectedMarkers.has(item.id)) {
+          this.selectedMarkers.add(item.id);
+          
+          // 마커 시각적 표시 업데이트
+          const marker = this.markers.get(item.id);
+          if (marker) {
+            marker.getElement().classList.add('selected');
+            marker.getElement().style.transform = 'scale(1.2)';
+            marker.getElement().style.zIndex = '1000';
+          }
+          
+          addedCount++;
+        }
+      });
+      
+      if (addedCount > 0) {
+        this.updateSelectionPanel();
+        this.updateUI();
+        
+        if (this.selectedMarkers.size >= 2) {
+          this.calculateRoute();
+        }
+        
+        alert(`${addedCount}개 항목을 선택목록에 추가했습니다.`);
+      } else {
+        alert('추가할 수 있는 새로운 항목이 없습니다.');
+      }
+    }
+
+    // 경로 외 마커 숨김/표시
+    toggleHideNonRouteMarkers() {
+      const hideNonRoute = document.getElementById('toggleHideNonRoute').checked;
+      
+      if (!hideNonRoute || this.currentRoute.length === 0) {
+        // 모든 마커 표시
+        this.markers.forEach(marker => {
+          const element = marker.getElement();
+          if (element) {
+            element.classList.remove('hidden-marker');
+          }
+        });
+        return;
+      }
+      
+      // 경로에 포함된 마커 ID들
+      const routeIds = new Set(this.currentRoute.map(item => item.id));
+      
+      // 마커 숨김/표시 처리
+      this.markers.forEach((marker, id) => {
+        const element = marker.getElement();
+        if (element) {
+          if (routeIds.has(id)) {
+            element.classList.remove('hidden-marker');
+          } else {
+            element.classList.add('hidden-marker');
+          }
+        }
+      });
+    }
+
+    // 클러스터 모드 토글
+    toggleClusterMode(useCluster) {
+      this.useClusterMode = useCluster;
+      
+      // 현재 레이어에서 모든 마커 제거
+      this.map.removeLayer(this.dataLayer);
+      this.map.removeLayer(this.clusterLayer);
+      
+      // 마커들을 적절한 레이어로 이동
+      if (useCluster) {
+        this.markers.forEach(marker => {
+          this.clusterLayer.addLayer(marker);
+        });
+        this.map.addLayer(this.clusterLayer);
+      } else {
+        this.markers.forEach(marker => {
+          this.dataLayer.addLayer(marker);
+        });
+        this.map.addLayer(this.dataLayer);
+      }
+    }
+
+    fitToMarkers() {
+      if (this.filteredData.length === 0) return;
+
+      const validPoints = this.filteredData.filter(item => item.lat && item.lng);
+      if (validPoints.length === 0) return;
+
+      const bounds = L.latLngBounds(validPoints.map(item => [item.lat, item.lng]));
+      this.map.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    refreshMap() {
+      this.applyFilters();
+      this.updateMarkers();
+    }
+
+    updateUI() {
+      // 카운트 업데이트
+      const totalCount = this.data.length;
+      const shownCount = this.filteredData.filter(item => item.lat && item.lng).length;
+      const missingCount = this.data.filter(item => !item.lat || !item.lng).length;
+      const filteredCount = totalCount - this.filteredData.length;
+
+      document.getElementById('totalCount').textContent = `총: ${totalCount}`;
+      document.getElementById('shownCount').textContent = `표시: ${shownCount}`;
+      document.getElementById('missingCount').textContent = `좌표없음: ${missingCount}`;
+      document.getElementById('filteredCount').textContent = `제외: ${filteredCount}`;
+
+      // 선택 버튼 업데이트
+      document.getElementById('showSelectionPanel').innerHTML = 
+        `📋 선택 목록 (${this.selectedMarkers.size})`;
+    }
+
+    setupKeyboardNavigation() {
+      document.addEventListener('keydown', (e) => {
+        // Escape: 팝업 닫기
+        if (e.key === 'Escape') {
+          this.map.closePopup();
+          const panel = document.getElementById('selectionPanel');
+          if (panel.style.display === 'block') {
+            panel.style.display = 'none';
+          }
+        }
+
+        // Ctrl+A: 전체 선택
+        if (e.ctrlKey && e.key === 'a') {
+          e.preventDefault();
+          this.selectAll();
+        }
+
+        // Ctrl+D: 선택 해제
+        if (e.ctrlKey && e.key === 'd') {
+          e.preventDefault();
+          this.clearSelection();
+        }
+
+        // F: 지도 맞춤
+        if (e.key === 'f' || e.key === 'F') {
+          this.fitToMarkers();
+        }
+      });
+    }
+
+    selectAll() {
+      const validItems = this.filteredData.filter(item => item.lat && item.lng);
+      const dailyLimit = parseInt(document.getElementById('dailyLimit').value) || 50;
+      
+      // 일일 한도만큼만 선택
+      const itemsToSelect = validItems.slice(0, dailyLimit);
+      
+      this.clearSelection();
+      itemsToSelect.forEach(item => {
+        this.selectedMarkers.add(item.id);
+        const marker = this.markers.get(item.id);
+        if (marker) {
+          marker.getElement().classList.add('selected');
+        }
+      });
+
+      this.updateSelectionPanel();
+      this.updateUI();
+      
+      if (this.selectedMarkers.size >= 2) {
+        this.calculateRoute();
+      }
+    }
+
+    setupOnlineStatus() {
+      const statusEl = document.getElementById('onlineStatus');
+      
+      const updateStatus = () => {
+        if (navigator.onLine) {
+          statusEl.textContent = '온라인';
+          statusEl.className = 'online-status online';
+        } else {
+          statusEl.textContent = '오프라인';
+          statusEl.className = 'online-status offline';
+        }
+      };
+      
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+      updateStatus();
+    }
+
+    openNavigation(lat, lng, name) {
+      // 내비게이션 앱으로 연결
+      const apps = [
+        { name: '카카오맵', url: `kakaomap://route?ep=${lat},${lng}&by=CAR` },
+        { name: '네이버지도', url: `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${encodeURIComponent(name)}` },
+        { name: '구글지도', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` }
+      ];
+      
+      // 사용 가능한 앱 확인 후 연결
+      apps.forEach(app => {
+        window.open(app.url, '_blank');
+      });
+    }
+
+    // 내보내기 기능들
+    exportSelection() {
+      if (this.selectedMarkers.size === 0) {
+        alert('선택된 항목이 없습니다.');
+        return;
+      }
+
+      const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id));
+      this.exportToExcel(selectedItems);
+    }
+
+    exportToExcel(data = null) {
+      const exportData = data || this.filteredData;
+      
+      if (exportData.length === 0) {
+        alert('내보낼 데이터가 없습니다.');
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData.map((item, index) => ({
+        '순번': index + 1,
+        '고유번호': item.id,
+        '시설명': item.name,
+        '주소': item.addr,
+        '업종': item.category,
+        '읍면동': item.district,
+        '군집': item.cluster,
+        '점검일': item.inspectionDate,
+        '위도': item.lat,
+        '경도': item.lng,
+        '경로순서': this.currentRoute.findIndex(r => r.id === item.id) + 1 || ''
+      })));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '점검대상지');
+
+      const filename = `청주_금연구역_점검대상지_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+    }
+
+    async exportToPDF() {
+      try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('l', 'mm', 'a4'); // 가로 방향
+        
+        // 지도 캡처
+        const mapElement = document.getElementById('map');
+        const canvas = await html2canvas(mapElement, {
+          useCORS: true,
+          allowTaint: true,
+          scale: document.getElementById('exportHighQuality').checked ? 2 : 1
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 277; // A4 가로 크기 (mm)
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+        
+        // 메타데이터 추가
+        pdf.setFontSize(12);
+        pdf.text(`청주시 금연구역 점검지도`, 10, imgHeight + 25);
+        pdf.text(`생성일: ${new Date().toLocaleDateString()}`, 10, imgHeight + 35);
+        pdf.text(`총 ${this.filteredData.length}개 지점 표시`, 10, imgHeight + 45);
+        
+        if (this.currentRoute.length > 0) {
+          pdf.text(`경로: ${this.currentRoute.length}개 지점`, 10, imgHeight + 55);
+        }
+        
+        const filename = `청주_금연구역_지도_${new Date().toISOString().slice(0, 10)}.pdf`;
+        pdf.save(filename);
+      } catch (error) {
+        console.error('PDF 내보내기 실패:', error);
+        alert('PDF 내보내기에 실패했습니다.');
+      }
+    }
+
+    async exportToImage() {
+      try {
+        const mapElement = document.getElementById('map');
+        const canvas = await html2canvas(mapElement, {
+          useCORS: true,
+          allowTaint: true,
+          scale: document.getElementById('exportHighQuality').checked ? 2 : 1
+        });
+        
+        // 다운로드 링크 생성
+        const link = document.createElement('a');
+        link.download = `청주_금연구역_지도_${new Date().toISOString().slice(0, 10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (error) {
+        console.error('이미지 내보내기 실패:', error);
+        alert('이미지 내보내기에 실패했습니다.');
+      }
+    }
+
+    // 샘플 데이터 로드 (테스트용)
+    loadSampleData() {
+      this.data = [
+        {
+          id: 'sample_1',
+          name: '청주시청 금연구역',
+          addr: '충청북도 청주시 상당구 상당로 69',
+          category: '관공서',
+          district: '중앙동',
+          cluster: '1',
+          inspectionDate: '2024-01-15',
+          lat: 36.6372,
+          lng: 127.4897
+        },
+        {
+          id: 'sample_2', 
+          name: '청주역 금연구역',
+          addr: '충청북도 청주시 흥덕구 가경동',
+          category: '교통시설',
+          district: '가경동',
+          cluster: '2',
+          inspectionDate: '',
+          lat: 36.6145,
+          lng: 127.4199
+        },
+        {
+          id: 'sample_3',
+          name: '청주대학교 금연구역',
+          addr: '충청북도 청주시 청원구 대성로 298',
+          category: '교육시설',
+          district: '내덕동',
+          cluster: '3',
+          inspectionDate: '2024-02-01',
+          lat: 36.6040,
+          lng: 127.4760
+        }
+      ];
+
+      this.buildFilterChips();
+      this.applyFilters();
+      this.updateMarkers();
+      this.updateUI();
+    }
+  }
+
+  // 애플리케이션 인스턴스 생성 및 전역 노출
+  let app;
+  document.addEventListener('DOMContentLoaded', () => {
+    app = new CheongJuInspectionMap();
+    window.app = app; // 전역 접근을 위해
+  });
+</script>
+</body>
+</html>

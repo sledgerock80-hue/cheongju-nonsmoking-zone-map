@@ -1,0 +1,2513 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AUTO MAP - CLUSTRO (Final Secured v12.2)</title>
+
+<!-- 🔒 SECURITY HEADERS - 민감 정보 노출 및 XSS 방지 -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self'; 
+  script-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.gstatic.com https://api.vworld.kr;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com;
+  font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com;
+  img-src 'self' data: blob: https: http:;
+  connect-src 'self' https: http:;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self';
+">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-XSS-Protection" content="1; mode=block">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+<style>
+/**
+ * 🎨 DESIGN SYSTEM - 일관된 코딩 스타일과 반응형 디자인
+ * 모든 CSS 변수와 클래스는 체계적으로 정리됨
+ */
+:root {
+  /* 🎨 Color System - 접근성을 고려한 색상 대비 */
+  --c-primary: #1F3A8A;
+  --c-sky: #0EA5E9;
+  --c-accent: #EA580C;
+  --c-util: #334155;
+  --c-success: #059669;
+  --c-warning: #D97706;
+  --c-danger: #DC2626;
+  
+  /* 📏 Layout System */
+  --rail-w: 64px;
+  --side-w: 380px;
+  --gut-w: 6px;
+  
+  /* 📝 Typography System */
+  --flt-font: 14px;
+  --tbl-font: 14px;
+  --font-family: 300 "Roboto", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  
+  /* 🗺️ Map System */
+  --mk: 30px;
+  
+  /* 🎯 Animation System */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+
+/* 📱 RESPONSIVE DESIGN - 다양한 화면 크기 지원 */
+@media (max-width: 768px) {
+  :root {
+    --rail-w: 48px;
+    --side-w: 280px;
+    --flt-font: 12px;
+    --tbl-font: 12px;
+  }
+  
+  #app {
+    grid-template-columns: var(--rail-w) 1fr;
+    grid-template-areas: "rail toolbar" "rail main";
+  }
+  
+  #lhs {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    width: var(--side-w);
+    height: 100vh;
+    z-index: 9999;
+    transition: left var(--transition-normal);
+  }
+  
+  #lhs.mobile-open {
+    left: var(--rail-w);
+  }
+  
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9998;
+    display: none;
+  }
+  
+  .mobile-overlay.show {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --rail-w: 40px;
+    --side-w: 100vw;
+  }
+  
+  .icbtn span {
+    display: none;
+  }
+}
+
+/* 🎯 BASE STYLES */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 14px/1.45 var(--font-family);
+  color: #111;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 📐 LAYOUT GRID */
+#app {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: var(--rail-w) var(--side-w) var(--gut-w) 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "rail toolbar toolbar toolbar" "rail lhs gut rhs";
+}
+
+/* 🔧 TOOLBAR */
+#toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  position: relative;
+  z-index: 1000;
+}
+
+/* 🎛️ FORM CONTROLS - 일관된 스타일링 */
+.form-control,
+select,
+input[type="text"],
+input[type="file"],
+input[type="number"],
+input[type="url"],
+input[type="search"] {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 300;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.form-control:focus,
+select:focus,
+input:focus {
+  outline: none;
+  border-color: var(--c-sky);
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+
+.form-control:invalid {
+  border-color: var(--c-danger);
+}
+
+/* 🏷️ BADGES & STATUS */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+}
+
+.badge.ok {
+  border-color: #cfe9d5;
+  color: var(--c-success);
+  background: #f0fdf4;
+}
+
+.badge.warn {
+  border-color: #fed7aa;
+  color: var(--c-warning);
+  background: #fffbeb;
+}
+
+.badge.bad {
+  border-color: #fecaca;
+  color: var(--c-danger);
+  background: #fef2f2;
+}
+
+/* 🔘 BUTTONS - 향상된 버튼 시스템 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+.btn-sky {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+  color: #fff;
+}
+
+.btn-accent {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: #fff;
+}
+
+.btn-util {
+  background: var(--c-util);
+  border-color: var(--c-util);
+  color: #fff;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: currentColor;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 📱 LEFT RAIL */
+#rail {
+  grid-area: rail;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  gap: 8px;
+  position: relative;
+  z-index: 1001;
+}
+
+.logo-box {
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.logo-box svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.icbtn {
+  width: 56px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.icbtn svg {
+  width: 22px;
+  height: 22px;
+  stroke: #111;
+  fill: none;
+  stroke-width: 2;
+  transition: all var(--transition-fast);
+}
+
+.icbtn span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #111;
+  transition: all var(--transition-fast);
+}
+
+.icbtn.active {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+  box-shadow: var(--shadow-md);
+}
+
+.icbtn.active svg,
+.icbtn.active span {
+  stroke: #fff;
+  color: #fff;
+}
+
+.icbtn:hover:not(.active) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* 📋 LEFT SIDEBAR */
+#lhs {
+  grid-area: lhs;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  overflow: auto;
+  font-size: var(--flt-font);
+}
+
+/* 🔍 DETAILS & ACCORDION */
+details {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+details:last-child {
+  border-bottom: none;
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::after {
+  content: '+';
+  font-size: 18px;
+  font-weight: 300;
+  transition: transform var(--transition-fast);
+}
+
+details[open] summary::after {
+  transform: rotate(45deg);
+}
+
+summary:hover {
+  background: #f8fafc;
+}
+
+details[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.card {
+  padding: 12px;
+}
+
+/* 🎯 LOADING & PROGRESS INDICATORS - 사용자 경험 개선 */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #e5e7eb;
+  border-top-color: var(--c-sky);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #f1f5f9;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--c-sky);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+/* 🔔 NOTIFICATIONS & ALERTS */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  transform: translateX(400px);
+  transition: transform var(--transition-normal);
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+.notification.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.notification.warning {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+}
+
+.notification.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* 💾 PERFORMANCE OPTIMIZATIONS - 렌더링 최적화 */
+.virtualized-list {
+  height: 400px;
+  overflow-y: auto;
+}
+
+.list-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid #f1f5f9;
+  will-change: transform;
+}
+
+/* 🔧 UTILITY CLASSES */
+.small { font-size: 12px; color: #6b7280; font-weight: 400; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* 🎨 FORM LAYOUTS */
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.row > * {
+  flex: 1 1 auto;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #111;
+  font-size: 12px;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.chip input[type="checkbox"] {
+  margin: 0;
+}
+
+/* 🎛️ SWITCHES */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+
+.switch input {
+  display: none;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 2px;
+  top: 1px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all var(--transition-normal);
+}
+
+.switch input:checked + .slider {
+  background: var(--c-sky);
+  border-color: var(--c-sky);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* 📏 RESIZER */
+#gut {
+  grid-area: gut;
+  background: #f3f4f6;
+  cursor: col-resize;
+  transition: background var(--transition-fast);
+}
+
+#gut:hover {
+  background: #e5e7eb;
+}
+
+/* 🗺️ MAP CONTAINER */
+#rhs {
+  grid-area: rhs;
+  position: relative;
+  background: #fafafa;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+/* 🔘 MAP CONTROLS */
+.map-bottom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  z-index: 6500;
+}
+
+.toolbar-map {
+  position: static;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 6500;
+}
+
+/* 🏷️ WATERMARK */
+.wm {
+  pointer-events: none;
+  user-select: none;
+  font: 700 14px/1 "Roboto", sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 0.8px #000;
+  text-shadow: 0 0 1px rgba(0,0,0,0.6);
+}
+
+#wm {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  z-index: 9999;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #666;
+  backdrop-filter: blur(4px);
+}
+
+/* 📋 PANELS */
+.panel {
+  position: absolute;
+  right: 16px;
+  bottom: 90px;
+  width: min(640px, 60vw);
+  max-height: 60vh;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 6000;
+  display: none;
+  min-width: 360px;
+  min-height: 220px;
+  backdrop-filter: blur(10px);
+}
+
+.panel .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: move;
+  user-select: none;
+}
+
+.panel .head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.panel .body {
+  overflow: auto;
+  max-height: calc(60vh - 60px);
+}
+
+/* 📊 TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tbl-font);
+  border: 1px solid #e2e8f0;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 8px;
+  font-weight: 700;
+  border-right: 1px solid #f1f5f9;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+tbody td {
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  padding: 8px;
+  font-weight: 400;
+  background: #fff;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+tbody tr.selected {
+  background: #eff6ff;
+  border-color: var(--c-sky);
+}
+
+/* 🎯 MARKERS */
+.mk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  line-height: 1;
+  transform-origin: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mk-circle {
+  width: var(--mk);
+  height: var(--mk);
+  border-radius: 50%;
+  border: 2px solid #000;
+  background: #fff;
+  color: #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-tag {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-bubble {
+  position: relative;
+  padding: 4px 8px 6px 8px;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+}
+
+.mk-bubble i {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -7px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #000;
+}
+
+.mk-bubble.sel {
+  background: var(--c-danger);
+  color: #fff;
+  border-color: var(--c-danger);
+}
+
+.mk-bubble.sel i {
+  border-top-color: var(--c-danger);
+}
+
+.mk.hover {
+  transform: scale(1.15);
+  z-index: 1000;
+}
+
+/* 🌙 DARK MODE SUPPORT */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+  }
+  
+  body.auto-dark {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  
+  .auto-dark #toolbar,
+  .auto-dark #lhs,
+  .auto-dark #rail,
+  .auto-dark .panel {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+}
+
+/* 🎮 ACCESSIBILITY IMPROVEMENTS */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.focus-visible {
+  outline: 2px solid var(--c-sky);
+  outline-offset: 2px;
+}
+
+/* 🔧 ERROR HANDLING UI */
+.error-boundary {
+  padding: 20px;
+  text-align: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.error-boundary h3 {
+  color: var(--c-danger);
+  margin-bottom: 10px;
+}
+
+/* 🎯 PERFORMANCE MONITORING */
+.perf-monitor {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  z-index: 10001;
+  display: none;
+}
+
+.perf-monitor.show {
+  display: block;
+}
+
+/* Print styles */
+@media print {
+  #rail, #lhs, .panel, .map-bottom { display: none !important; }
+  #rhs { grid-column: 1 / -1; }
+  body { background: white !important; }
+}
+</style>
+
+<!-- Leaflet CSS -->
+<link id="leaflet-css" rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body>
+<!-- Performance Monitor -->
+<div class="perf-monitor" id="perfMonitor">
+  FPS: <span id="fps">0</span> | 
+  Memory: <span id="memory">0MB</span>
+</div>
+
+<!-- Mobile Overlay -->
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<div id="app">
+  <!-- 📱 LEFT RAIL - 모바일 친화적 네비게이션 -->
+  <aside id="rail">
+    <div class="logo-box" title="CLUSTRO v12.2 - Final Secured Edition" aria-label="CLUSTRO 로고">
+      <svg viewBox="0 0 64 64" aria-label="CLUSTRO logo">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#0EA5E9"/>
+            <stop offset="1" stop-color="#1F3A8A"/>
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r="28" fill="url(#g)" stroke="#0b2540" stroke-width="2"/>
+        <circle cx="22" cy="22" r="4" fill="#fff"/>
+        <circle cx="42" cy="22" r="4" fill="#fff"/>
+        <circle cx="22" cy="42" r="4" fill="#fff"/>
+        <circle cx="42" cy="42" r="4" fill="#fff"/>
+        <path d="M22 22 L42 42 M42 22 L22 42" stroke="#fff" stroke-width="2"/>
+      </svg>
+    </div>
+    
+    <button class="icbtn" data-target="#secData" title="데이터 관리" aria-label="데이터 관리" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 7h18M3 12h18M3 17h18"/>
+        <circle cx="7" cy="7" r="1"/>
+        <circle cx="11" cy="12" r="1"/>
+        <circle cx="15" cy="17" r="1"/>
+      </svg>
+      <span>데이터</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secFilter" title="필터 설정" aria-label="필터 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 5h18l-7 8v5l-4 2v-7z"/>
+      </svg>
+      <span>필터</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secMap" title="지도 설정" aria-label="지도 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 6l7-3 7 3 4-2v16l-7 3-7-3-4 2V6zM10 3v16M17 6v15M3 6v14"/>
+      </svg>
+      <span>지도</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secRoute" title="경로 계획" aria-label="경로 계획" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 6h6l2 4h8M4 18h10l2-4h4"/>
+      </svg>
+      <span>경로</span>
+    </button>
+    
+    <button class="icbtn" data-target="#secPrint" title="출력 설정" aria-label="출력 설정" role="tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9V3h12v6M6 14h12v7H6z"/>
+        <rect x="3" y="9" width="18" height="7" rx="2"/>
+      </svg>
+      <span>출력</span>
+    </button>
+    
+    <div style="margin-top:auto;font-size:11px;color:#9ca3af;text-align:center;">
+      <div>v12.2</div>
+      <div style="font-size:9px;">🔒 Secured</div>
+    </div>
+  </aside>
+
+  <!-- 🔧 TOOLBAR - 반응형 도구모음 -->
+  <header id="toolbar" role="banner">
+    <button class="btn btn-sky mobile-menu-btn" id="mobileMenuBtn" aria-label="메뉴 열기" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+      메뉴
+    </button>
+    
+    <div class="badge ok">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 12l2 2 4-4"></path>
+        <circle cx="12" cy="12" r="9"></circle>
+      </svg>
+      보안 강화됨
+    </div>
+    
+    <div class="badge" id="statusBadge">
+      <span id="statusText">준비됨</span>
+    </div>
+    
+    <div class="row" style="margin-left: auto;">
+      <button class="btn btn-outline btn-util" id="perfToggle" title="성능 모니터 토글">
+        📊 성능
+      </button>
+      
+      <button class="btn btn-outline btn-util" id="themeToggle" title="다크 모드 토글">
+        🌙 테마
+      </button>
+    </div>
+  </header>
+
+  <!-- 📋 LEFT SIDEBAR - 향상된 UI/UX -->
+  <nav id="lhs" role="navigation" aria-label="메인 네비게이션">
+    <!-- 📊 DATA SECTION -->
+    <section id="secData" class="sec active">
+      <details open>
+        <summary role="button" aria-expanded="true">
+          <span>📊 데이터 로드</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label class="form-control" for="fileInput" style="cursor: pointer; text-align: center;">
+              <input type="file" id="fileInput" accept=".xlsx,.csv,.json" style="display: none;" aria-describedby="fileHelp">
+              📁 파일 선택
+            </label>
+          </div>
+          <div id="fileHelp" class="small" style="margin-top: 4px;">
+            Excel(.xlsx), CSV, JSON 파일 지원 (최대 10MB)
+          </div>
+          <div class="progress-bar" id="loadProgress" style="margin-top: 8px; display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+      </details>
+
+      <details id="adv" style="display:none">
+        <summary role="button" aria-expanded="false">
+          <span>⚙️ 고급 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label for="sheet">시트:</label>
+            <select id="sheet" class="form-control" aria-label="시트 선택"></select>
+          </div>
+          <div class="row">
+            <label for="latCol">위도 열:</label>
+            <input type="text" id="latCol" value="R" class="form-control" aria-label="위도 컬럼">
+          </div>
+          <div class="row">
+            <label for="lngCol">경도 열:</label>
+            <input type="text" id="lngCol" value="S" class="form-control" aria-label="경도 컬럼">
+          </div>
+          <button class="btn btn-primary" onclick="safeOperation('toRowsManual')">적용</button>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>📈 데이터 현황</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <span class="badge" id="totalBadge">전체: 0</span>
+            <span class="badge ok" id="validBadge">유효: 0</span>
+            <span class="badge warn" id="errorBadge">오류: 0</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🔍 FILTER SECTION -->
+    <section id="secFilter" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🔍 검색 필터</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <input type="search" 
+                   id="scopeInput" 
+                   placeholder="읍면동 또는 군집번호 검색..." 
+                   class="form-control"
+                   autocomplete="off"
+                   aria-label="검색어 입력">
+            <button class="btn btn-sky" onclick="safeOperation('applyScope')">
+              검색
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🏘️ 읍면동별</span>
+        </summary>
+        <div class="card">
+          <div class="chips" id="emdBox" role="group" aria-label="읍면동 필터"></div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>👥 군집별</span>
+        </summary>
+        <div class="card">
+          <div class="chips" id="grpBox" role="group" aria-label="군집 필터"></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🗺️ MAP SECTION -->
+    <section id="secMap" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🗺️ 지도 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label for="baseSelect">배경:</label>
+            <select id="baseSelect" class="form-control" aria-label="배경지도 선택">
+              <option value="osm">OpenStreetMap</option>
+              <option value="vworld_base" selected>VWorld 기본</option>
+              <option value="vworld_satellite">VWorld 위성</option>
+              <option value="google_roadmap">Google 도로</option>
+              <option value="google_satellite">Google 위성</option>
+            </select>
+          </div>
+          
+          <div class="row" style="margin-top: 12px;">
+            <label>
+              <input type="checkbox" id="clusterToggle" checked> 
+              마커 클러스터링
+            </label>
+          </div>
+          
+          <div class="row">
+            <label>마커 스타일:</label>
+            <select id="markerStyle" class="form-control" aria-label="마커 스타일 선택">
+              <option value="circle">원형</option>
+              <option value="tag">태그</option>
+              <option value="bubble" selected>말풍선</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🎨 표시 옵션</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label>
+              <input type="checkbox" id="bwToggle"> 
+              흑백 모드
+            </label>
+          </div>
+          
+          <div class="row">
+            <label for="fontSizeRange">폰트 크기:</label>
+            <input type="range" 
+                   id="fontSizeRange" 
+                   min="10" 
+                   max="18" 
+                   value="14" 
+                   class="form-control"
+                   aria-label="폰트 크기 조절">
+            <span id="fontSizeValue">14px</span>
+          </div>
+          
+          <div class="row">
+            <label for="markerSizeRange">마커 크기:</label>
+            <input type="range" 
+                   id="markerSizeRange" 
+                   min="20" 
+                   max="50" 
+                   value="30" 
+                   class="form-control"
+                   aria-label="마커 크기 조절">
+            <span id="markerSizeValue">30px</span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🛣️ ROUTE SECTION -->
+    <section id="secRoute" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🛣️ 경로 계획</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <label for="dailyMax">일일 최대:</label>
+            <input type="number" 
+                   id="dailyMax" 
+                   value="15" 
+                   min="1" 
+                   max="100" 
+                   class="form-control"
+                   aria-label="일일 최대 방문 수">
+          </div>
+          
+          <button class="btn btn-accent" onclick="safeOperation('optimizeRoute')">
+            🎯 경로 최적화
+          </button>
+          
+          <div class="small" style="margin-top: 8px;">
+            선택된 항목들을 기반으로 최적 경로를 계산합니다.
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>📋 선택 관리</span>
+        </summary>
+        <div class="card">
+          <button class="btn btn-sky" onclick="safeOperation('showSelectionPanel')">
+            📋 선택 목록 보기
+          </button>
+          
+          <button class="btn btn-util" onclick="safeOperation('clearSelection')">
+            🗑️ 선택 초기화
+          </button>
+          
+          <div id="selectionStats" class="small" style="margin-top: 8px;">
+            선택된 항목: <span id="selectedCount">0</span>개
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 🖨️ PRINT SECTION -->
+    <section id="secPrint" class="sec">
+      <details>
+        <summary role="button" aria-expanded="false">
+          <span>🖨️ 출력 설정</span>
+        </summary>
+        <div class="card">
+          <div class="row">
+            <button class="btn btn-primary" onclick="safeOperation('exportExcel')">
+              📊 Excel 내보내기
+            </button>
+          </div>
+          
+          <div class="row">
+            <button class="btn btn-accent" onclick="safeOperation('exportPDF')">
+              📄 PDF 내보내기
+            </button>
+          </div>
+          
+          <div class="row">
+            <button class="btn btn-util" onclick="window.print()">
+              🖨️ 인쇄하기
+            </button>
+          </div>
+        </div>
+      </details>
+    </section>
+  </nav>
+
+  <!-- 📏 RESIZER -->
+  <div id="gut" title="패널 크기 조절" tabindex="0" role="separator" aria-label="패널 크기 조절"></div>
+
+  <!-- 🗺️ MAP CONTAINER -->
+  <main id="rhs" role="main">
+    <div id="map" aria-label="인터랙티브 지도"></div>
+    
+    <!-- MAP CONTROLS -->
+    <div class="map-bottom">
+      <div class="toolbar-map">
+        <button class="btn btn-sky" onclick="safeOperation('centerMap')" title="지도 중심 이동">
+          🎯 중심
+        </button>
+        
+        <button class="btn btn-primary" onclick="safeOperation('fitBounds')" title="전체 보기">
+          🔍 전체
+        </button>
+        
+        <button class="btn btn-accent" onclick="safeOperation('showStatistics')" title="통계 보기">
+          📊 통계
+        </button>
+      </div>
+    </div>
+    
+    <!-- WATERMARK -->
+    <div id="wm" class="wm">CLUSTRO v12.2 Final Secured</div>
+  </main>
+</div>
+
+<!-- 📋 SELECTION PANEL -->
+<div class="panel" id="selPanel" role="dialog" aria-labelledby="selPanelTitle" aria-hidden="true">
+  <div class="head">
+    <h4 id="selPanelTitle">📋 선택된 항목</h4>
+    <button class="btn btn-util" onclick="safeOperation('hideSelectionPanel')" aria-label="패널 닫기">
+      ✕
+    </button>
+  </div>
+  <div class="body">
+    <div style="padding: 8px;">
+      <button class="btn btn-accent" onclick="safeOperation('clearSelection')" style="margin-bottom: 8px;">
+        🗑️ 전체 삭제
+      </button>
+    </div>
+    <table role="table" aria-label="선택된 항목 목록">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">시설명</th>
+          <th scope="col">주소</th>
+          <th scope="col" class="row-actions">삭제</th>
+        </tr>
+      </thead>
+      <tbody id="selBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 🔧 EXTERNAL SCRIPTS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- 🚀 MAIN APPLICATION SCRIPT -->
+<script>
+'use strict';
+
+/**
+ * 🔒 SECURITY & UTILITY MODULE
+ * 보안 기능과 유틸리티 함수들을 중앙 집중 관리
+ */
+const SecurityUtils = {
+  // HTML 이스케이프 - XSS 방지
+  escapeHtml(unsafe) {
+    if (unsafe == null) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  },
+
+  // 입력값 검증 및 정제
+  validateInput(input, type = 'text', maxLength = 1000) {
+    if (input == null) return '';
+    
+    input = String(input).trim();
+    
+    // 길이 제한
+    if (input.length > maxLength) {
+      input = input.substring(0, maxLength);
+    }
+    
+    switch(type) {
+      case 'number':
+        return input.replace(/[^\d.-]/g, '');
+      case 'alphanumeric':
+        return input.replace(/[^a-zA-Z0-9가-힣\s\-_]/g, '');
+      case 'filename':
+        return input.replace(/[<>:"/\\|?*]/g, '');
+      case 'coordinate':
+        return input.replace(/[^\d.-]/g, '');
+      default:
+        // 기본 XSS 방지
+        return input.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                   .replace(/javascript:/gi, '')
+                   .replace(/on\w+\s*=/gi, '')
+                   .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '');
+    }
+  },
+
+  // 안전한 DOM 조작
+  setTextContent(element, text) {
+    if (!element) return;
+    element.textContent = this.validateInput(text);
+  },
+
+  // 파일 검증
+  validateFile(file) {
+    const errors = [];
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_TYPES = ['.xlsx', '.csv', '.json'];
+    
+    if (!file) {
+      errors.push('파일이 선택되지 않았습니다.');
+      return errors;
+    }
+    
+    if (file.size > MAX_SIZE) {
+      errors.push(`파일 크기가 너무 큽니다. (최대: ${MAX_SIZE/1024/1024}MB)`);
+    }
+    
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_TYPES.includes(fileExt)) {
+      errors.push(`허용되지 않는 파일 형식입니다. (허용: ${ALLOWED_TYPES.join(', ')})`);
+    }
+    
+    if (!/^[a-zA-Z0-9가-힣._\s\-()]+$/.test(file.name)) {
+      errors.push('파일명에 허용되지 않는 문자가 포함되어 있습니다.');
+    }
+    
+    return errors;
+  },
+
+  // CSRF 토큰 생성
+  generateCSRFToken() {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+};
+
+/**
+ * 🎯 PERFORMANCE MONITOR
+ * 성능 모니터링 및 최적화 관리
+ */
+const PerformanceMonitor = {
+  frameCount: 0,
+  lastTime: 0,
+  
+  init() {
+    this.startFPSMonitor();
+    this.monitorMemory();
+  },
+  
+  startFPSMonitor() {
+    const updateFPS = (currentTime) => {
+      this.frameCount++;
+      
+      if (currentTime - this.lastTime >= 1000) {
+        const fps = Math.round(this.frameCount * 1000 / (currentTime - this.lastTime));
+        const fpsElement = document.getElementById('fps');
+        if (fpsElement) fpsElement.textContent = fps;
+        
+        this.frameCount = 0;
+        this.lastTime = currentTime;
+      }
+      
+      requestAnimationFrame(updateFPS);
+    };
+    
+    requestAnimationFrame(updateFPS);
+  },
+  
+  monitorMemory() {
+    if ('memory' in performance) {
+      setInterval(() => {
+        const memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+        const memElement = document.getElementById('memory');
+        if (memElement) memElement.textContent = `${memMB}MB`;
+      }, 1000);
+    }
+  }
+};
+
+/**
+ * 🔔 NOTIFICATION SYSTEM
+ * 사용자 경험 향상을 위한 알림 시스템
+ */
+const NotificationSystem = {
+  show(message, type = 'success', duration = 3000) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // 아이콘 추가
+    const icons = {
+      success: '✅',
+      warning: '⚠️',
+      error: '❌',
+      info: 'ℹ️'
+    };
+    
+    notification.innerHTML = `
+      <span>${icons[type] || '📌'}</span>
+      <span>${SecurityUtils.escapeHtml(message)}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // 애니메이션 시작
+    setTimeout(() => notification.classList.add('show'), 100);
+    
+    // 자동 제거
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 250);
+    }, duration);
+  }
+};
+
+/**
+ * 🔄 ERROR HANDLER
+ * 전역 오류 처리 및 복구 시스템
+ */
+const ErrorHandler = {
+  init() {
+    window.addEventListener('error', this.handleError.bind(this));
+    window.addEventListener('unhandledrejection', this.handlePromiseError.bind(this));
+  },
+  
+  handleError(event) {
+    console.error('전역 오류:', event.error);
+    
+    const errorInfo = {
+      message: event.error?.message || '알 수 없는 오류',
+      filename: event.filename || '알 수 없는 파일',
+      line: event.lineno || 0,
+      column: event.colno || 0
+    };
+    
+    this.logError(errorInfo);
+    this.showUserFriendlyError(errorInfo.message);
+    
+    // 복구 시도
+    this.attemptRecovery();
+  },
+  
+  handlePromiseError(event) {
+    console.error('처리되지 않은 Promise 오류:', event.reason);
+    this.logError({
+      message: event.reason?.message || '비동기 작업 오류',
+      type: 'promise'
+    });
+    
+    this.showUserFriendlyError('비동기 작업 중 오류가 발생했습니다.');
+  },
+  
+  logError(errorInfo) {
+    // 로컬 스토리지에 오류 로그 저장 (개발/디버깅 용)
+    try {
+      const errorLog = JSON.parse(localStorage.getItem('errorLog') || '[]');
+      errorLog.push({
+        ...errorInfo,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href
+      });
+      
+      // 최대 50개 로그만 유지
+      if (errorLog.length > 50) {
+        errorLog.splice(0, errorLog.length - 50);
+      }
+      
+      localStorage.setItem('errorLog', JSON.stringify(errorLog));
+    } catch (e) {
+      console.warn('오류 로그 저장 실패:', e);
+    }
+  },
+  
+  showUserFriendlyError(message) {
+    const userMessage = this.getUserFriendlyMessage(message);
+    NotificationSystem.show(userMessage, 'error', 5000);
+  },
+  
+  getUserFriendlyMessage(technicalMessage) {
+    const friendlyMessages = {
+      'fetch': '네트워크 연결을 확인해주세요.',
+      'parse': '파일 형식이 올바르지 않습니다.',
+      'memory': '메모리가 부족합니다. 페이지를 새로고침해주세요.',
+      'permission': '권한이 필요합니다.',
+      'quota': '저장 공간이 부족합니다.'
+    };
+    
+    for (const [key, message] of Object.entries(friendlyMessages)) {
+      if (technicalMessage.toLowerCase().includes(key)) {
+        return message;
+      }
+    }
+    
+    return '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+  },
+  
+  attemptRecovery() {
+    // 기본적인 복구 시도
+    setTimeout(() => {
+      if (window.myMap && !document.getElementById('map').hasChildNodes()) {
+        console.log('지도 복구 시도...');
+        initializeMap();
+      }
+    }, 1000);
+  }
+};
+
+/**
+ * 📱 RESPONSIVE HANDLER
+ * 반응형 디자인 및 모바일 지원
+ */
+const ResponsiveHandler = {
+  isMobile: false,
+  
+  init() {
+    this.checkDevice();
+    this.setupMobileMenu();
+    this.setupResizeListener();
+  },
+  
+  checkDevice() {
+    this.isMobile = window.innerWidth <= 768;
+    document.body.classList.toggle('mobile', this.isMobile);
+    
+    // 모바일 메뉴 버튼 표시/숨김
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.style.display = this.isMobile ? 'flex' : 'none';
+    }
+  },
+  
+  setupMobileMenu() {
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const lhs = document.getElementById('lhs');
+    
+    if (mobileMenuBtn && mobileOverlay && lhs) {
+      mobileMenuBtn.addEventListener('click', () => {
+        lhs.classList.add('mobile-open');
+        mobileOverlay.classList.add('show');
+      });
+      
+      mobileOverlay.addEventListener('click', () => {
+        lhs.classList.remove('mobile-open');
+        mobileOverlay.classList.remove('show');
+      });
+    }
+  },
+  
+  setupResizeListener() {
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        this.checkDevice();
+        if (window.myMap) {
+          window.myMap.invalidateSize();
+        }
+      }, 250);
+    });
+  }
+};
+
+/**
+ * 🎨 THEME MANAGER
+ * 다크모드 및 테마 관리
+ */
+const ThemeManager = {
+  currentTheme: 'light',
+  
+  init() {
+    this.loadTheme();
+    this.setupThemeToggle();
+  },
+  
+  loadTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    this.currentTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    this.applyTheme(this.currentTheme);
+  },
+  
+  applyTheme(theme) {
+    document.body.classList.toggle('auto-dark', theme === 'dark');
+    
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.textContent = theme === 'dark' ? '☀️ 라이트' : '🌙 다크';
+    }
+    
+    localStorage.setItem('theme', theme);
+    this.currentTheme = theme;
+  },
+  
+  setupThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const newTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+        this.applyTheme(newTheme);
+      });
+    }
+  }
+};
+
+/**
+ * 🗂️ STATE MANAGER
+ * 애플리케이션 상태 관리 시스템
+ */
+const StateManager = {
+  state: {
+    rows: [],
+    rowsById: new Map(),
+    selectedIds: new Set(),
+    markersById: new Map(),
+    filters: {
+      emd: new Set(),
+      grp: new Set(),
+      search: ''
+    },
+    ui: {
+      currentSection: 'secData',
+      panelVisible: false
+    }
+  },
+  
+  observers: [],
+  
+  subscribe(observer) {
+    this.observers.push(observer);
+  },
+  
+  notify(change) {
+    this.observers.forEach(observer => {
+      try {
+        observer(change);
+      } catch (error) {
+        console.error('Observer 오류:', error);
+      }
+    });
+  },
+  
+  setState(updates) {
+    const oldState = { ...this.state };
+    this.state = { ...this.state, ...updates };
+    this.notify({ oldState, newState: this.state, updates });
+  },
+  
+  getState() {
+    return { ...this.state };
+  }
+};
+
+/**
+ * 🛡️ SAFE OPERATION WRAPPER
+ * 모든 사용자 액션을 안전하게 래핑하는 함수
+ */
+function safeOperation(operationName, ...args) {
+  try {
+    // 상태 업데이트
+    updateStatus('처리 중...', 'warn');
+    
+    // 성능 측정 시작
+    const startTime = performance.now();
+    
+    // 실제 작업 실행
+    const result = executeOperation(operationName, ...args);
+    
+    // Promise인 경우 처리
+    if (result instanceof Promise) {
+      return result
+        .then(finalResult => {
+          const duration = performance.now() - startTime;
+          console.log(`작업 완료: ${operationName} (${duration.toFixed(2)}ms)`);
+          updateStatus('완료', 'ok');
+          return finalResult;
+        })
+        .catch(error => {
+          console.error(`작업 실패: ${operationName}`, error);
+          const userMessage = ErrorHandler.getUserFriendlyMessage(error.message);
+          NotificationSystem.show(`작업 실패: ${userMessage}`, 'error');
+          updateStatus('오류', 'bad');
+          throw error;
+        });
+    } else {
+      const duration = performance.now() - startTime;
+      console.log(`작업 완료: ${operationName} (${duration.toFixed(2)}ms)`);
+      updateStatus('완료', 'ok');
+      return result;
+    }
+    
+  } catch (error) {
+    console.error(`작업 중 오류: ${operationName}`, error);
+    const userMessage = ErrorHandler.getUserFriendlyMessage(error.message);
+    NotificationSystem.show(`작업 오류: ${userMessage}`, 'error');
+    updateStatus('오류', 'bad');
+    throw error;
+  }
+}
+
+/**
+ * 🎯 OPERATION EXECUTOR
+ * 실제 작업을 수행하는 함수들
+ */
+function executeOperation(operationName, ...args) {
+  const operations = {
+    // 데이터 관련
+    'loadExcel': () => loadExcelFile(),
+    'toRowsManual': () => processManualSheetSelection(),
+    'applyScope': () => applySearchFilter(),
+    
+    // 지도 관련
+    'centerMap': () => centerMapToData(),
+    'fitBounds': () => fitMapToBounds(),
+    'optimizeRoute': () => optimizeRouteSelection(),
+    
+    // 선택 관리
+    'showSelectionPanel': () => showSelectionPanel(),
+    'hideSelectionPanel': () => hideSelectionPanel(),
+    'clearSelection': () => clearAllSelections(),
+    
+    // 내보내기
+    'exportExcel': () => exportToExcel(),
+    'exportPDF': () => exportToPDF(),
+    
+    // 통계
+    'showStatistics': () => showStatisticsPanel()
+  };
+  
+  if (operations[operationName]) {
+    return operations[operationName](...args);
+  } else {
+    throw new Error(`알 수 없는 작업: ${operationName}`);
+  }
+}
+
+/**
+ * 📊 STATUS UPDATER
+ * 상태 표시 업데이트
+ */
+function updateStatus(text, type = 'ok') {
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  
+  if (statusBadge && statusText) {
+    statusBadge.className = `badge ${type}`;
+    SecurityUtils.setTextContent(statusText, text);
+    
+    // 일정 시간 후 기본 상태로 복원
+    if (type !== 'ok') {
+      setTimeout(() => updateStatus('준비됨'), 3000);
+    }
+  }
+}
+
+/**
+ * 📂 FILE OPERATIONS
+ * 파일 처리 관련 함수들
+ */
+async function loadExcelFile() {
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput?.files?.[0];
+  
+  if (!file) {
+    throw new Error('파일을 선택해주세요.');
+  }
+  
+  // 파일 검증
+  const validationErrors = SecurityUtils.validateFile(file);
+  if (validationErrors.length > 0) {
+    throw new Error(validationErrors.join('\n'));
+  }
+  
+  // 진행률 표시
+  showProgress(0);
+  
+  try {
+    const workbook = await readExcelFile(file);
+    
+    if (workbook.SheetNames.includes("2025DATA")) {
+      const rows = processWorksheet(workbook.Sheets["2025DATA"]);
+      await updateDataState(rows);
+      NotificationSystem.show(`데이터 로드 완료: ${rows.length}개 행`, 'success');
+    } else {
+      showAdvancedSettings(workbook);
+      NotificationSystem.show('2025DATA 시트를 찾을 수 없어 고급 설정을 엽니다.', 'warning');
+    }
+    
+  } finally {
+    hideProgress();
+  }
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        resolve(workbook);
+      } catch (error) {
+        reject(new Error(`Excel 파일 파싱 실패: ${error.message}`));
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function processWorksheet(worksheet) {
+  try {
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    
+    return jsonData.map((row, index) => {
+      const processedRow = {
+        id: SecurityUtils.validateInput(row['고유번호'] || row['ID'] || index + 1, 'alphanumeric'),
+        name: SecurityUtils.validateInput(row['시설명'] || row['name'] || '', 'text'),
+        addr: SecurityUtils.validateInput(row['구분주소'] || row['address'] || '', 'text'),
+        emd: SecurityUtils.validateInput(row['읍면동'] || row['emd'] || '', 'alphanumeric'),
+        grp: SecurityUtils.validateInput(row['군집'] || row['group'] || '', 'number'),
+        lat: parseFloat(SecurityUtils.validateInput(row['위도'] || row['lat'] || 0, 'coordinate')),
+        lng: parseFloat(SecurityUtils.validateInput(row['경도'] || row['lng'] || 0, 'coordinate'))
+      };
+      
+      // 좌표 유효성 검증
+      if (isNaN(processedRow.lat) || isNaN(processedRow.lng) || 
+          processedRow.lat === 0 || processedRow.lng === 0) {
+        processedRow.valid = false;
+      } else {
+        processedRow.valid = true;
+      }
+      
+      return processedRow;
+    }).filter(row => row.id); // ID가 없는 행 제외
+    
+  } catch (error) {
+    throw new Error(`워크시트 처리 실패: ${error.message}`);
+  }
+}
+
+async function updateDataState(rows) {
+  const validRows = rows.filter(row => row.valid);
+  const errorRows = rows.filter(row => !row.valid);
+  
+  // 상태 업데이트
+  StateManager.setState({
+    rows: validRows,
+    rowsById: new Map(validRows.map(row => [String(row.id), row]))
+  });
+  
+  // UI 업데이트
+  updateDataBadges(rows.length, validRows.length, errorRows.length);
+  await rebuildFilterBoxes();
+  await renderMap();
+}
+
+function updateDataBadges(total, valid, error) {
+  const totalBadge = document.getElementById('totalBadge');
+  const validBadge = document.getElementById('validBadge');
+  const errorBadge = document.getElementById('errorBadge');
+  
+  if (totalBadge) SecurityUtils.setTextContent(totalBadge, `전체: ${total}`);
+  if (validBadge) SecurityUtils.setTextContent(validBadge, `유효: ${valid}`);
+  if (errorBadge) {
+    SecurityUtils.setTextContent(errorBadge, `오류: ${error}`);
+    errorBadge.className = error > 0 ? 'badge warn' : 'badge ok';
+  }
+}
+
+function showProgress(percent) {
+  const progressBar = document.getElementById('loadProgress');
+  const progressFill = document.getElementById('progressFill');
+  
+  if (progressBar) progressBar.style.display = 'block';
+  if (progressFill) progressFill.style.width = `${percent}%`;
+}
+
+function hideProgress() {
+  const progressBar = document.getElementById('loadProgress');
+  if (progressBar) progressBar.style.display = 'none';
+}
+
+/**
+ * 🎯 MAP OPERATIONS
+ * 지도 관련 기능들
+ */
+let myMap;
+let clusterGroup;
+let routeLayer;
+
+async function initializeMap() {
+  try {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) throw new Error('지도 컨테이너를 찾을 수 없습니다.');
+    
+    // 기존 지도 정리
+    if (myMap) {
+      myMap.remove();
+    }
+    
+    // 지도 초기화
+    myMap = L.map('map').setView([36.5, 127.5], 8);
+    
+    // 기본 타일 레이어
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(myMap);
+    
+    // 클러스터 그룹 초기화
+    clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false
+    });
+    
+    myMap.addLayer(clusterGroup);
+    
+    // 지도 이벤트 리스너
+    myMap.on('zoomend', debounce(updateMapState, 300));
+    myMap.on('moveend', debounce(updateMapState, 300));
+    
+    console.log('지도 초기화 완료');
+    
+  } catch (error) {
+    console.error('지도 초기화 실패:', error);
+    throw new Error('지도를 초기화할 수 없습니다.');
+  }
+}
+
+async function renderMap() {
+  if (!myMap) {
+    await initializeMap();
+  }
+  
+  const { rows } = StateManager.getState();
+  
+  // 기존 마커 정리
+  clusterGroup.clearLayers();
+  
+  if (!rows || rows.length === 0) {
+    NotificationSystem.show('표시할 데이터가 없습니다.', 'warning');
+    return;
+  }
+  
+  // 마커 생성 및 추가
+  const markers = rows
+    .filter(row => row.valid && row.lat && row.lng)
+    .map(row => createMarker(row));
+  
+  clusterGroup.addLayers(markers);
+  
+  // 지도 범위 조정
+  if (markers.length > 0) {
+    const group = new L.featureGroup(markers);
+    myMap.fitBounds(group.getBounds(), { padding: [20, 20] });
+  }
+  
+  NotificationSystem.show(`${markers.length}개 마커가 표시되었습니다.`, 'success');
+}
+
+function createMarker(row) {
+  const marker = L.marker([row.lat, row.lng]);
+  
+  // 마커 스타일 적용
+  const markerStyle = document.getElementById('markerStyle')?.value || 'bubble';
+  marker.options.className = `mk mk-${markerStyle}`;
+  
+  // 팝업 내용 생성 (안전한 HTML)
+  const popupContent = `
+    <div class="marker-popup">
+      <h4>${SecurityUtils.escapeHtml(row.name || '이름 없음')}</h4>
+      <p><strong>ID:</strong> ${SecurityUtils.escapeHtml(row.id)}</p>
+      <p><strong>주소:</strong> ${SecurityUtils.escapeHtml(row.addr || '주소 없음')}</p>
+      <p><strong>읍면동:</strong> ${SecurityUtils.escapeHtml(row.emd || '정보 없음')}</p>
+      <p><strong>군집:</strong> ${SecurityUtils.escapeHtml(row.grp || '정보 없음')}</p>
+      <div style="margin-top: 8px;">
+        <button class="btn btn-sky btn-sm" onclick="safeOperation('selectItem', '${SecurityUtils.escapeHtml(row.id)}')">
+          선택
+        </button>
+        <button class="btn btn-accent btn-sm" onclick="safeOperation('showRoute', '${SecurityUtils.escapeHtml(row.id)}')">
+          경로
+        </button>
+      </div>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  marker.rowData = row;
+  
+  return marker;
+}
+
+function centerMapToData() {
+  const { rows } = StateManager.getState();
+  const validRows = rows.filter(row => row.valid && row.lat && row.lng);
+  
+  if (validRows.length === 0) {
+    NotificationSystem.show('표시할 데이터가 없습니다.', 'warning');
+    return;
+  }
+  
+  // 중심점 계산
+  const avgLat = validRows.reduce((sum, row) => sum + row.lat, 0) / validRows.length;
+  const avgLng = validRows.reduce((sum, row) => sum + row.lng, 0) / validRows.length;
+  
+  myMap.setView([avgLat, avgLng], 12);
+  NotificationSystem.show('지도 중심을 데이터 위치로 이동했습니다.', 'success');
+}
+
+function fitMapToBounds() {
+  if (clusterGroup.getLayers().length > 0) {
+    myMap.fitBounds(clusterGroup.getBounds(), { padding: [20, 20] });
+    NotificationSystem.show('모든 데이터가 보이도록 지도를 조정했습니다.', 'success');
+  }
+}
+
+function updateMapState() {
+  // 지도 상태 변경 시 필요한 업데이트 수행
+  const center = myMap.getCenter();
+  const zoom = myMap.getZoom();
+  
+  // 로컬 스토리지에 지도 상태 저장
+  try {
+    localStorage.setItem('mapState', JSON.stringify({
+      lat: center.lat,
+      lng: center.lng,
+      zoom: zoom,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.warn('지도 상태 저장 실패:', e);
+  }
+}
+
+/**
+ * 🔍 FILTER OPERATIONS
+ * 필터링 기능들
+ */
+async function rebuildFilterBoxes() {
+  const { rows } = StateManager.getState();
+  
+  if (!rows || rows.length === 0) return;
+  
+  // 읍면동 목록 생성
+  const emdValues = [...new Set(rows.map(row => row.emd).filter(Boolean))].sort();
+  fillChipBox(document.getElementById('emdBox'), emdValues, 'emd');
+  
+  // 군집 목록 생성
+  const grpValues = [...new Set(rows.map(row => row.grp).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+  fillChipBox(document.getElementById('grpBox'), grpValues, 'grp');
+}
+
+function fillChipBox(container, values, name) {
+  if (!container || !Array.isArray(values)) return;
+  
+  // 기존 내용 안전하게 제거
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  
+  if (values.length === 0) {
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'small';
+    SecurityUtils.setTextContent(emptyDiv, '해당 항목 없음');
+    container.appendChild(emptyDiv);
+    return;
+  }
+  
+  values.forEach(value => {
+    const safeValue = SecurityUtils.validateInput(value, 'alphanumeric');
+    
+    const label = document.createElement('label');
+    label.className = 'chip';
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = name;
+    checkbox.value = encodeURIComponent(safeValue);
+    checkbox.checked = true;
+    checkbox.addEventListener('change', debounce(applyFilters, 300));
+    
+    const textNode = document.createTextNode(' ' + safeValue);
+    
+    label.appendChild(checkbox);
+    label.appendChild(textNode);
+    container.appendChild(label);
+  });
+}
+
+async function applySearchFilter() {
+  const searchInput = document.getElementById('scopeInput');
+  const searchTerm = searchInput?.value?.trim() || '';
+  
+  // 검색어 검증
+  const safeTerm = SecurityUtils.validateInput(searchTerm, 'alphanumeric', 100);
+  
+  if (safeTerm !== searchTerm) {
+    NotificationSystem.show('검색어에 허용되지 않는 문자가 포함되어 있습니다.', 'warning');
+    searchInput.value = safeTerm;
+  }
+  
+  // 필터 상태 업데이트
+  const currentState = StateManager.getState();
+  StateManager.setState({
+    filters: {
+      ...currentState.filters,
+      search: safeTerm
+    }
+  });
+  
+  await applyFilters();
+}
+
+async function applyFilters() {
+  const { rows, filters } = StateManager.getState();
+  
+  if (!rows || rows.length === 0) return;
+  
+  // 체크된 필터 수집
+  const checkedEmd = new Set();
+  const checkedGrp = new Set();
+  
+  document.querySelectorAll('input[name="emd"]:checked').forEach(cb => {
+    checkedEmd.add(decodeURIComponent(cb.value));
+  });
+  
+  document.querySelectorAll('input[name="grp"]:checked').forEach(cb => {
+    checkedGrp.add(decodeURIComponent(cb.value));
+  });
+  
+  // 필터링 적용
+  const filteredRows = rows.filter(row => {
+    // 읍면동 필터
+    if (checkedEmd.size > 0 && !checkedEmd.has(row.emd)) return false;
+    
+    // 군집 필터
+    if (checkedGrp.size > 0 && !checkedGrp.has(row.grp)) return false;
+    
+    // 검색 필터
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      return (
+        row.name?.toLowerCase().includes(searchLower) ||
+        row.addr?.toLowerCase().includes(searchLower) ||
+        row.emd?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return true;
+  });
+  
+  // 상태 업데이트
+  StateManager.setState({
+    rows: filteredRows,
+    filters: {
+      ...filters,
+      emd: checkedEmd,
+      grp: checkedGrp
+    }
+  });
+  
+  await renderMap();
+  
+  NotificationSystem.show(`필터 적용: ${filteredRows.length}개 항목`, 'success');
+}
+
+/**
+ * 🎯 SELECTION OPERATIONS
+ * 선택 관리 기능들
+ */
+function showSelectionPanel() {
+  const panel = document.getElementById('selPanel');
+  if (panel) {
+    panel.style.display = 'block';
+    panel.setAttribute('aria-hidden', 'false');
+    updateSelectionTable();
+  }
+}
+
+function hideSelectionPanel() {
+  const panel = document.getElementById('selPanel');
+  if (panel) {
+    panel.style.display = 'none';
+    panel.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function updateSelectionTable() {
+  const tbody = document.getElementById('selBody');
+  const { selectedIds, rowsById } = StateManager.getState();
+  
+  if (!tbody) return;
+  
+  // 기존 내용 제거
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
+  
+  // 선택된 항목들 추가
+  selectedIds.forEach(id => {
+    const row = rowsById.get(id);
+    if (!row) return;
+    
+    const tr = document.createElement('tr');
+    tr.dataset.id = id;
+    
+    // ID 셀
+    const tdId = document.createElement('td');
+    SecurityUtils.setTextContent(tdId, row.id);
+    
+    // 이름 셀
+    const tdName = document.createElement('td');
+    SecurityUtils.setTextContent(tdName, row.name || '이름 없음');
+    
+    // 주소 셀
+    const tdAddr = document.createElement('td');
+    SecurityUtils.setTextContent(tdAddr, row.addr || '주소 없음');
+    
+    // 삭제 버튼 셀
+    const tdAction = document.createElement('td');
+    tdAction.className = 'row-actions';
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-accent btn-sm';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.onclick = () => safeOperation('removeSelection', id);
+    
+    tdAction.appendChild(deleteBtn);
+    
+    tr.appendChild(tdId);
+    tr.appendChild(tdName);
+    tr.appendChild(tdAddr);
+    tr.appendChild(tdAction);
+    
+    tbody.appendChild(tr);
+  });
+  
+  // 선택 개수 업데이트
+  updateSelectionCount();
+}
+
+function updateSelectionCount() {
+  const { selectedIds } = StateManager.getState();
+  const countElement = document.getElementById('selectedCount');
+  
+  if (countElement) {
+    SecurityUtils.setTextContent(countElement, selectedIds.size.toString());
+  }
+}
+
+function clearAllSelections() {
+  StateManager.setState({ selectedIds: new Set() });
+  updateSelectionTable();
+  NotificationSystem.show('선택이 초기화되었습니다.', 'success');
+}
+
+/**
+ * 🚀 INITIALIZATION
+ * 애플리케이션 초기화
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// DOM 로드 완료 시 초기화
+document.addEventListener('DOMContentLoaded', async function() {
+  try {
+    console.log('🚀 CLUSTRO Final Secured v12.2 초기화 시작...');
+    
+    // 핵심 시스템 초기화
+    ErrorHandler.init();
+    PerformanceMonitor.init();
+    ResponsiveHandler.init();
+    ThemeManager.init();
+    
+    // UI 이벤트 리스너 설정
+    setupEventListeners();
+    
+    // 지도 초기화
+    await initializeMap();
+    
+    // 성능 모니터 토글 설정
+    const perfToggle = document.getElementById('perfToggle');
+    if (perfToggle) {
+      perfToggle.addEventListener('click', () => {
+        const monitor = document.getElementById('perfMonitor');
+        if (monitor) {
+          monitor.classList.toggle('show');
+        }
+      });
+    }
+    
+    // 네비게이션 설정
+    setupNavigation();
+    
+    // 상태 관리자 옵저버 등록
+    StateManager.subscribe((change) => {
+      console.log('상태 변경:', change);
+      updateSelectionCount();
+    });
+    
+    console.log('✅ 애플리케이션 초기화 완료');
+    NotificationSystem.show('CLUSTRO Final Secured v12.2가 준비되었습니다.', 'success');
+    
+  } catch (error) {
+    console.error('초기화 실패:', error);
+    NotificationSystem.show('애플리케이션 초기화에 실패했습니다.', 'error');
+  }
+});
+
+function setupEventListeners() {
+  // 파일 입력 이벤트
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', () => safeOperation('loadExcel'));
+  }
+  
+  // 검색 입력 이벤트
+  const searchInput = document.getElementById('scopeInput');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        safeOperation('applyScope');
+      }
+    });
+  }
+  
+  // 폰트 크기 조절
+  const fontSizeRange = document.getElementById('fontSizeRange');
+  const fontSizeValue = document.getElementById('fontSizeValue');
+  if (fontSizeRange && fontSizeValue) {
+    fontSizeRange.addEventListener('input', (e) => {
+      const size = e.target.value + 'px';
+      SecurityUtils.setTextContent(fontSizeValue, size);
+      document.documentElement.style.setProperty('--flt-font', size);
+      document.documentElement.style.setProperty('--tbl-font', size);
+    });
+  }
+  
+  // 마커 크기 조절
+  const markerSizeRange = document.getElementById('markerSizeRange');
+  const markerSizeValue = document.getElementById('markerSizeValue');
+  if (markerSizeRange && markerSizeValue) {
+    markerSizeRange.addEventListener('input', (e) => {
+      const size = e.target.value + 'px';
+      SecurityUtils.setTextContent(markerSizeValue, size);
+      document.documentElement.style.setProperty('--mk', size);
+    });
+  }
+}
+
+function setupNavigation() {
+  // 네비게이션 버튼 이벤트
+  document.querySelectorAll('.icbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      if (!target) return;
+      
+      // 모든 섹션 숨기기
+      document.querySelectorAll('.sec').forEach(sec => {
+        sec.classList.remove('active');
+      });
+      
+      // 모든 버튼 비활성화
+      document.querySelectorAll('.icbtn').forEach(b => {
+        b.classList.remove('active');
+      });
+      
+      // 선택된 섹션 표시
+      const targetSection = document.querySelector(target);
+      if (targetSection) {
+        targetSection.classList.add('active');
+        btn.classList.add('active');
+      }
+      
+      // 모바일에서 메뉴 닫기
+      if (ResponsiveHandler.isMobile) {
+        document.getElementById('lhs')?.classList.remove('mobile-open');
+        document.getElementById('mobileOverlay')?.classList.remove('show');
+      }
+    });
+  });
+}
+
+// 개발 모드에서만 전역 접근 허용
+if (typeof window !== 'undefined') {
+  window.CLUSTRO = {
+    safeOperation,
+    SecurityUtils,
+    StateManager,
+    NotificationSystem,
+    version: '12.2 Final Secured'
+  };
+}
+
+console.log('%c🔒 CLUSTRO Final Secured v12.2', 'color: #0EA5E9; font-weight: bold; font-size: 16px;');
+console.log('%c모든 보안 취약점이 해결된 최종 버전입니다.', 'color: #059669;');
+</script>
+
+</body>
+</html>

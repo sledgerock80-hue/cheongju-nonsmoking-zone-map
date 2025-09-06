@@ -1,0 +1,2692 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>CLUSTRO 청주 금연구역 점검지도 - 네비게이션 통합판 v14.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* 청주시 CI 색상을 반영한 현대적인 디자인 */
+    --primary: #1E40AF; /* 청주시 대표색상 */
+    --primary-light: #3B82F6;
+    --accent: #F59E0B; /* 강조색 */
+    --accent-light: #FCD34D;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    
+    --rail-w: 68px;
+    --side-w: 400px;
+    --gap: 8px;
+    --marker-size: 32px;
+    --border-radius: 12px;
+    --border-radius-sm: 8px;
+    --shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.15);
+    --transition: all 0.2s ease;
+  }
+
+  /* 오프라인/온라인 상태 표시 */
+  .online-status {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+  }
+  .online-status.online {
+    background: var(--success);
+    color: white;
+  }
+  .online-status.offline {
+    background: var(--danger);
+    color: white;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* 기본 스타일 리셋 및 개선 */
+  * { box-sizing: border-box; }
+  
+  body {
+    margin: 0;
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-800);
+    background: var(--gray-50);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 접근성 개선 */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  button, .btn {
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    font-family: inherit;
+  }
+
+  button:hover, .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+
+  button:active, .btn:active {
+    transform: translateY(0);
+  }
+
+  /* 레이아웃 그리드 */
+  #app {
+    display: grid;
+    min-height: 100vh;
+    grid-template-columns: var(--rail-w) var(--side-w) var(--gap) 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 
+      "rail toolbar toolbar toolbar" 
+      "rail sidebar gap main";
+  }
+
+  /* 상단 툴바 */
+  #toolbar {
+    grid-area: toolbar;
+    background: white;
+    border-bottom: 2px solid var(--gray-200);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  /* 좌측 레일 */
+  #rail {
+    grid-area: rail;
+    background: white;
+    border-right: 2px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px;
+    gap: 12px;
+  }
+
+  .logo-container {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: var(--shadow);
+  }
+
+  .nav-button {
+    width: 52px;
+    height: 52px;
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--gray-600);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .nav-button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+  }
+
+  .nav-button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .nav-button svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+  }
+
+  /* 사이드바 */
+  #sidebar {
+    grid-area: sidebar;
+    background: white;
+    border-right: 2px solid var(--gray-200);
+    overflow-y: auto;
+    font-size: 13px;
+  }
+
+  .section {
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .section-header {
+    padding: 16px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: var(--gray-700);
+    transition: var(--transition);
+  }
+
+  .section-header:hover {
+    background: var(--gray-100);
+  }
+
+  .section-content {
+    padding: 20px;
+  }
+
+  /* 버튼 스타일 개선 */
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--border-radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition);
+    text-decoration: none;
+    cursor: pointer;
+    min-height: 36px;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    border: 2px solid var(--primary);
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+  }
+
+  .btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 2px solid var(--gray-200);
+  }
+
+  .btn-secondary:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border: 2px solid var(--accent);
+  }
+
+  .btn-accent:hover {
+    background: var(--accent-light);
+    border-color: var(--accent-light);
+  }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+    border: 2px solid var(--success);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+    border: 2px solid var(--danger);
+  }
+
+  /* 입력 요소 개선 */
+  input, select, textarea {
+    padding: 8px 12px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    background: white;
+    font-size: 13px;
+    transition: var(--transition);
+    min-height: 36px;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* 배지 스타일 */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .badge-primary {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+
+  .badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  .badge-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+
+  .badge-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  /* 칩 스타일 */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .chip:hover {
+    background: var(--gray-200);
+  }
+
+  .chip input[type="checkbox"] {
+    margin: 0;
+    min-height: auto;
+  }
+
+  /* 스위치 스타일 개선 */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    min-height: auto;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--gray-300);
+    transition: var(--transition);
+    border-radius: 28px;
+    border: 2px solid var(--gray-200);
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    top: 2px;
+    background: white;
+    transition: var(--transition);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .switch input:checked + .slider {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .switch input:checked + .slider:before {
+    transform: translateX(24px);
+  }
+
+  /* 갭 영역 */
+  #gap {
+    grid-area: gap;
+    background: var(--gray-200);
+    cursor: col-resize;
+    position: relative;
+  }
+
+  #gap:hover {
+    background: var(--primary-light);
+  }
+
+  #gap::after {
+    content: '⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gray-500);
+    font-size: 16px;
+  }
+
+  /* 메인 지도 영역 */
+  #main {
+    grid-area: main;
+    position: relative;
+    background: var(--gray-100);
+  }
+
+  #map {
+    position: absolute;
+    inset: 0;
+    border-radius: 0;
+  }
+
+  /* 지도 컨트롤 */
+  .map-controls {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* 선택 패널 개선 - 드래그/리사이즈 지원 */
+  .selection-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: min(600px, 45vw);
+    max-width: 90vw;
+    max-height: 60vh;
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    display: none;
+    overflow: hidden;
+    resize: both;
+    min-width: 400px;
+    min-height: 300px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  
+  /* 패널 리사이즈 핸들 */
+  .selection-panel .edge {
+    position: absolute;
+    background: transparent;
+  }
+  .selection-panel .e-left {
+    left: -16px;
+    top: 0;
+    width: 22px;
+    height: 100%;
+    cursor: ew-resize;
+  }
+  .selection-panel .e-right {
+    right: -16px;
+    top: 0;
+    width: 22px;
+    height: 100%;
+    cursor: ew-resize;
+  }
+  .selection-panel .e-top {
+    top: -20px;
+    left: 0;
+    width: 100%;
+    height: 24px;
+    cursor: ns-resize;
+  }
+  .selection-panel .e-bottom {
+    bottom: -16px;
+    left: 0;
+    width: 100%;
+    height: 22px;
+    cursor: ns-resize;
+  }
+  
+  /* 터치 디바이스용 리사이즈 핸들 표시 */
+  @media (pointer: coarse) {
+    .selection-panel .e-left::before,
+    .selection-panel .e-right::before,
+    .selection-panel .e-top::before,
+    .selection-panel .e-bottom::before {
+      content: '';
+      position: absolute;
+      background: rgba(59, 130, 246, 0.1);
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      border-radius: 4px;
+    }
+    
+    .selection-panel .e-left::before,
+    .selection-panel .e-right::before {
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 40px;
+      left: 50%;
+      margin-left: -3px;
+    }
+    
+    .selection-panel .e-top::before,
+    .selection-panel .e-bottom::before {
+      left: 50%;
+      transform: translateX(-50%);
+      height: 6px;
+      width: 40px;
+      top: 50%;
+      margin-top: -3px;
+    }
+  }
+
+  .panel-header {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border-bottom: 2px solid var(--gray-200);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: move;
+    user-select: none;
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+  }
+
+  /* 테이블 스타일 개선 */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .data-table th {
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200);
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-700);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .data-table td {
+    border-bottom: 1px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200);
+    padding: 10px 8px;
+    background: white;
+  }
+
+  .data-table tr:hover td {
+    background: var(--gray-50);
+  }
+
+  /* 마커 스타일 개선 */
+  .marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 11px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .marker:hover {
+    transform: scale(1.1);
+    z-index: 1000;
+  }
+
+  .marker.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+  }
+
+  /* 카테고리별 아이콘과 색상 - E열 값 기준 */
+  .marker.category-pc방 { background: #FF6B6B; }
+  .marker.category-노래방 { background: #4ECDC4; }
+  .marker.category-당구장 { background: #45B7D1; }
+  .marker.category-게임장 { background: #96CEB4; }
+  .marker.category-독서실 { background: #FECA57; }
+  .marker.category-찜질방 { background: #FF9FF3; }
+  .marker.category-카페 { background: #54A0FF; }
+  .marker.category-음식점 { background: #5F27CD; }
+  .marker.category-기타 { background: #758495; }
+
+  /* 워터마크 */
+  .watermark {
+    position: fixed;
+    bottom: 8px;
+    right: 8px;
+    z-index: 9999;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: 10px;
+    color: var(--gray-500);
+    backdrop-filter: blur(4px);
+  }
+
+  /* 다크모드 지원 */
+  @media (prefers-color-scheme: dark) {
+    body.auto-dark {
+      background: var(--gray-900);
+      color: var(--gray-100);
+    }
+    
+    body.auto-dark #toolbar,
+    body.auto-dark #rail,
+    body.auto-dark #sidebar,
+    body.auto-dark .selection-panel {
+      background: var(--gray-800);
+      border-color: var(--gray-700);
+      color: var(--gray-100);
+    }
+    
+    body.auto-dark input,
+    body.auto-dark select,
+    body.auto-dark textarea {
+      background: var(--gray-700);
+      border-color: var(--gray-600);
+      color: var(--gray-100);
+    }
+  }
+
+  /* 반응형 디자인 개선 */
+  @media screen and (max-width: 1200px) {
+    :root {
+      --side-w: 360px;
+    }
+  }
+
+  @media screen and (max-width: 1024px) {
+    #app {
+      grid-template-columns: var(--rail-w) 1fr;
+      grid-template-areas:
+        "rail toolbar"
+        "rail main";
+    }
+    
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: var(--rail-w);
+      width: var(--side-w);
+      height: 100vh;
+      z-index: 3000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    #sidebar.open {
+      transform: translateX(0);
+    }
+    
+    #gap {
+      display: none;
+    }
+    
+    .selection-panel {
+      width: min(500px, 90vw);
+      right: 10px;
+      bottom: 10px;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    :root {
+      --rail-w: 60px;
+    }
+    
+    #toolbar {
+      padding: 8px 12px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    
+    .nav-button {
+      width: 44px;
+      height: 44px;
+      font-size: 9px;
+    }
+    
+    .nav-button svg {
+      width: 18px;
+      height: 18px;
+    }
+    
+    .logo-container {
+      width: 48px;
+      height: 48px;
+      font-size: 10px;
+    }
+    
+    .btn {
+      min-height: 44px;
+      padding: 12px 16px;
+    }
+    
+    .selection-panel {
+      width: calc(100vw - 20px);
+      right: 10px;
+      bottom: 10px;
+      min-width: 280px;
+      max-height: 70vh;
+    }
+    
+    .chips {
+      gap: 6px;
+    }
+    
+    .chip {
+      font-size: 11px;
+      padding: 4px 8px;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    :root {
+      --rail-w: 56px;
+    }
+    
+    .selection-panel {
+      width: calc(100vw - 16px);
+      right: 8px;
+      bottom: 8px;
+      min-width: 250px;
+    }
+    
+    .section-content {
+      padding: 16px;
+    }
+  }
+
+  /* 터치 디바이스 최적화 */
+  @media (pointer: coarse) {
+    .btn, button, input, select {
+      min-height: 44px;
+    }
+    
+    .chip {
+      min-height: 40px;
+      padding: 8px 12px;
+    }
+    
+    .nav-button {
+      min-width: 48px;
+      min-height: 48px;
+    }
+    
+    .marker {
+      min-width: 36px;
+      min-height: 36px;
+    }
+  }
+
+  /* 고대비 접근성 */
+  @media (prefers-contrast: high) {
+    :root {
+      --gray-200: #000000;
+      --gray-300: #333333;
+    }
+    
+    .btn {
+      border-width: 3px;
+    }
+  }
+
+  /* 애니메이션 비활성화 옵션 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* 로딩 스피너 */
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s ease-in-out infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* 성능 최적화를 위한 GPU 가속 */
+  .marker,
+  .btn,
+  .nav-button {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* 인쇄 스타일 */
+  @media print {
+    #rail,
+    #sidebar,
+    .map-controls,
+    .selection-panel {
+      display: none !important;
+    }
+    
+    #main {
+      grid-column: 1 / -1;
+    }
+    
+    body {
+      background: white;
+    }
+  }
+
+  /* 사용자 정의 스크롤바 */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--gray-100);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+  }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+  <!-- 온라인 상태 표시 -->
+  <div class="online-status" id="onlineStatus">
+    <span id="statusText">연결 확인중...</span>
+  </div>
+
+  <div id="app">
+    <!-- 좌측 네비게이션 레일 -->
+    <nav id="rail">
+      <div class="logo-container" title="CLUSTRO">
+        <svg viewBox="0 0 64 64" aria-label="CLUSTRO logo" style="width: 48px; height: 48px;">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#0EA5E9"/>
+              <stop offset="1" stop-color="#1F3A8A"/>
+            </linearGradient>
+          </defs>
+          <circle cx="32" cy="32" r="28" fill="url(#g)" stroke="#0b2540" stroke-width="2"/>
+          <circle cx="22" cy="22" r="4" fill="#fff"/>
+          <circle cx="42" cy="22" r="4" fill="#fff"/>
+          <circle cx="22" cy="42" r="4" fill="#fff"/>
+          <circle cx="42" cy="42" r="4" fill="#fff"/>
+          <path d="M22 22 L42 42 M42 22 L22 42" stroke="#fff" stroke-width="2"/>
+        </svg>
+      </div>
+      
+      <button class="nav-button active" data-section="data" aria-label="데이터 관리">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span>데이터</span>
+      </button>
+
+      <button class="nav-button" data-section="filter" aria-label="필터 설정">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"/>
+        </svg>
+        <span>필터</span>
+      </button>
+
+      <button class="nav-button" data-section="map" aria-label="지도 설정">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+        </svg>
+        <span>지도</span>
+      </button>
+
+      <button class="nav-button" data-section="route" aria-label="경로 설정">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+        <span>경로</span>
+      </button>
+
+      <button class="nav-button" data-section="export" aria-label="내보내기">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span>내보내기</span>
+      </button>
+
+      <div style="margin-top: auto; padding-top: 20px;">
+        <label class="chip" style="writing-mode: vertical-rl; text-orientation: mixed;">
+          <input type="checkbox" id="darkToggle"> 다크모드
+        </label>
+      </div>
+    </nav>
+
+    <!-- 상단 툴바 -->
+    <header id="toolbar">
+      <button class="btn btn-secondary" id="toggleSidebar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        메뉴
+      </button>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 12px; color: var(--gray-600);">라벨</label>
+        <select id="labelSource">
+          <option value="id">고유번호</option>
+          <option value="name">시설명</option>
+          <option value="addr">주소</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 12px; color: var(--gray-600);">배경지도</label>
+        <select id="baseMap">
+          <option value="auto">자동 선택</option>
+          <option value="osm">OpenStreetMap</option>
+          <option value="vworld_gray">VWorld 회색</option>
+          <option value="vworld_base" selected>VWorld 기본</option>
+          <option value="none">없음</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 12px; color: var(--gray-600);">줌 레벨</label>
+        <input type="range" id="zoomSlider" min="5" max="19" step="0.1" value="12" style="width: 120px;">
+        <span class="badge badge-primary" id="zoomDisplay">12.0</span>
+      </div>
+
+      <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+        <span class="badge badge-primary" id="totalCount">총: 0</span>
+        <span class="badge badge-success" id="shownCount">표시: 0</span>
+        <span class="badge badge-warning" id="missingCount">좌표없음: 0</span>
+        <span class="badge badge-danger" id="filteredCount">제외: 0</span>
+      </div>
+    </header>
+
+    <!-- 사이드바 -->
+    <aside id="sidebar">
+      <!-- 데이터 섹션 -->
+      <section class="section" data-section="data">
+        <div class="section-header">
+          <span>📊 데이터 관리</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+        <div class="section-content">
+          <div style="margin-bottom: 16px;">
+            <label class="btn btn-primary" for="dataFile" style="cursor: pointer;">
+              📁 엑셀 파일 선택
+            </label>
+            <input type="file" id="dataFile" accept=".xlsx,.xls,.xlsm" style="display: none;">
+          </div>
+          <div style="font-size: 12px; color: var(--gray-600); margin-bottom: 16px;">
+            <strong>2025DATA</strong> 시트의 <strong>B,C,E,G,H,J,R,S,U</strong> 열을 자동으로 읽어옵니다.<br>
+            (구분주소/고유번호/카테고리/시설명/읍면동/점검일/위도/경도/군집)
+          </div>
+          <details style="margin-top: 12px;">
+            <summary style="cursor: pointer; font-weight: 500;">고급 설정</summary>
+            <div style="padding: 12px 0; border-top: 1px solid var(--gray-200); margin-top: 8px;">
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 12px; color: var(--gray-600);">시트 선택</label>
+                <select id="sheetSelect" style="width: 100%; margin-top: 4px;"></select>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1;">
+                  <label style="font-size: 12px; color: var(--gray-600);">위도 열</label>
+                  <input id="latColumn" placeholder="R" style="width: 100%; margin-top: 4px;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="font-size: 12px; color: var(--gray-600);">경도 열</label>
+                  <input id="lngColumn" placeholder="S" style="width: 100%; margin-top: 4px;">
+                </div>
+              </div>
+              <button class="btn btn-primary" id="applyAdvanced" style="width: 100%; margin-top: 12px;">적용</button>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- 필터 섹션 -->
+      <section class="section" data-section="filter">
+        <div class="section-header">
+          <span>🔍 필터 및 검색</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+        <div class="section-content">
+          <div style="margin-bottom: 16px;">
+            <input id="searchInput" placeholder="군집 번호 또는 읍면동 검색..." style="width: 100%;">
+            <button class="btn btn-secondary" id="clearSearch" style="margin-top: 8px;">검색 초기화</button>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label class="chip">
+              <input type="checkbox" id="includeNoCoords" checked> 좌표 없는 데이터 포함
+            </label>
+            <label class="chip" style="margin-top: 8px;">
+              <input type="checkbox" id="onlyUninspected" checked> 미점검만 표시
+            </label>
+          </div>
+
+          <!-- 군집 필터 -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong>군집별 필터</strong>
+              <label class="switch">
+                <input type="checkbox" id="clusterToggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div id="clusterChips" class="chips"></div>
+          </div>
+
+          <!-- 읍면동 필터 -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong>읍면동별 필터</strong>
+              <label class="switch">
+                <input type="checkbox" id="districtToggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div id="districtChips" class="chips"></div>
+          </div>
+
+          <!-- 카테고리 필터 -->
+          <div style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <strong>업종별 필터</strong>
+              <label class="switch">
+                <input type="checkbox" id="categoryToggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div id="categoryChips" class="chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 지도 섹션 -->
+      <section class="section" data-section="map">
+        <div class="section-header">
+          <span>🗺️ 지도 설정</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+        <div class="section-content">
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; color: var(--gray-600);">마커 스타일</label>
+            <select id="markerStyle" style="width: 100%; margin-top: 4px;">
+              <option value="circle">원형</option>
+              <option value="square">사각형</option>
+              <option value="bubble" selected>말풍선</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; color: var(--gray-600);">마커 크기</label>
+            <input type="range" id="markerSize" min="20" max="40" value="32" style="width: 100%; margin-top: 4px;">
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label class="chip">
+              <input type="checkbox" id="clusterMarkers"> 마커 클러스터링
+            </label>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label class="chip">
+              <input type="checkbox" id="showLabels" checked> 라벨 표시
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 경로 섹션 -->
+      <section class="section" data-section="route">
+        <div class="section-header">
+          <span>🚗 경로 계획</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+        <div class="section-content">
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; color: var(--gray-600);">경로 알고리즘</label>
+            <select id="routeAlgorithm" style="width: 100%; margin-top: 4px;">
+              <option value="nearest" selected>최근접 이웃</option>
+              <option value="tsp">TSP 최적화</option>
+              <option value="cluster">클러스터 기반</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 12px; color: var(--gray-600);">일일 최대 방문지</label>
+            <input type="number" id="dailyLimit" value="50" min="1" max="200" style="width: 100%; margin-top: 4px;">
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <button class="btn btn-primary" id="calculateRoute" style="width: 100%;">
+              <div class="loading-spinner" id="routeSpinner" style="display: none;"></div>
+              경로 계산
+            </button>
+            <button class="btn btn-secondary" id="clearRoute" style="width: 100%; margin-top: 8px;">경로 초기화</button>
+          </div>
+
+          <div id="routeStats" style="font-size: 12px; color: var(--gray-600); display: none;">
+            <div>총 거리: <span id="totalDistance">-</span></div>
+            <div>예상 시간: <span id="estimatedTime">-</span></div>
+            <div>방문지 수: <span id="waypointCount">-</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 내보내기 섹션 -->
+      <section class="section" data-section="export">
+        <div class="section-header">
+          <span>📤 내보내기</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+        <div class="section-content">
+          <div style="margin-bottom: 16px;">
+            <button class="btn btn-primary" id="exportExcel" style="width: 100%;">
+              📊 Excel 내보내기
+            </button>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <button class="btn btn-secondary" id="exportPDF" style="width: 100%;">
+              📄 PDF 내보내기
+            </button>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <button class="btn btn-secondary" id="exportImage" style="width: 100%;">
+              🖼️ 이미지 내보내기
+            </button>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label class="chip">
+              <input type="checkbox" id="includeRoute"> 경로 포함
+            </label>
+            <label class="chip" style="margin-top: 8px;">
+              <input type="checkbox" id="highQuality"> 고화질
+            </label>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 갭 리사이저 -->
+    <div id="gap"></div>
+
+    <!-- 메인 지도 영역 -->
+    <main id="main">
+      <!-- 지도 컨트롤 -->
+      <div class="map-controls">
+        <button class="btn btn-primary" id="showSelectionPanel">
+          📋 선택 목록 (0)
+        </button>
+        <button class="btn btn-secondary" id="fitToMarkers">🎯 전체 보기</button>
+        <button class="btn btn-secondary" id="refreshMap">🔄 새로고침</button>
+      </div>
+
+      <!-- 지도 -->
+      <div id="map"></div>
+
+      <!-- 선택 목록 패널 -->
+      <div class="selection-panel" id="selectionPanel">
+        <div class="panel-header">
+          <h3 class="panel-title">선택된 점검 대상지 <span id="selectedCount">(0개)</span></h3>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-accent" id="exportSelected">📊 내보내기</button>
+            <button class="btn btn-secondary" id="clearSelected">🗑️ 모두 삭제</button>
+            <button class="btn btn-secondary" id="closePanel">✕</button>
+          </div>
+        </div>
+        <div class="panel-content">
+          <table class="data-table" id="selectionTable">
+            <thead>
+              <tr>
+                <th>고유번호</th>
+                <th>시설명</th>
+                <th>주소</th>
+                <th>카테고리</th>
+                <th>군집</th>
+                <th>순서</th>
+                <th>액션</th>
+              </tr>
+            </thead>
+            <tbody id="selectionTableBody">
+            </tbody>
+          </table>
+        </div>
+        <!-- 리사이즈 핸들 -->
+        <div class="edge e-left"></div>
+        <div class="edge e-right"></div>
+        <div class="edge e-top"></div>
+        <div class="edge e-bottom"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 워터마크 -->
+  <div class="watermark">
+    © 2025 CLUSTRO 청주시 금연구역 점검지도 v14.0 | 개발: Hong Seokhyeong
+  </div>
+
+  <!-- 스크립트 로드 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script>
+    // 네비게이션 앱 연동 함수 - 플랫폼 자동 감지 및 앱 실행
+    function openNav(app, lat, lng, name = '목적지') {
+      // 목적지 이름 URL 인코딩
+      const encodedName = encodeURIComponent(name);
+      
+      // 플랫폼 감지
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+      const isAndroid = /android/i.test(userAgent);
+      
+      let url = '';
+      let fallbackUrl = '';
+      
+      switch(app) {
+        case 'kakao':
+          // 카카오맵 - 웹 폴백 포함
+          url = `kakaomap://route?ep=${lat},${lng}&by=car`;
+          fallbackUrl = `http://m.map.kakao.com/scheme/route?ep=${lat},${lng}&by=car`;
+          break;
+          
+        case 'naver':
+          // 네이버맵
+          url = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${encodedName}&appname=com.example.webapp`;
+          if (isIOS) {
+            fallbackUrl = 'https://apps.apple.com/kr/app/naver-map/id311867728';
+          } else {
+            fallbackUrl = 'https://play.google.com/store/apps/details?id=com.nhn.android.nmap';
+          }
+          break;
+          
+        case 'tmap':
+          // 티맵 - 플랫폼별 다른 URL 스킴
+          if (isIOS) {
+            url = `tmap://route?rGoName=${encodedName}&rGoX=${lng}&rGoY=${lat}`;
+            fallbackUrl = 'https://apps.apple.com/kr/app/tmap/id431589174';
+          } else {
+            url = `tmap://route?referrer=com.skt.Tmap&goalx=${lng}&goaly=${lat}&goalname=${encodedName}`;
+            fallbackUrl = 'https://play.google.com/store/apps/details?id=com.skt.tmap.ku';
+          }
+          break;
+          
+        case 'google':
+          // 구글맵 - 웹 기반, 앱 자동 연동
+          url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+          break;
+          
+        case 'apple':
+          // 애플맵 - iOS 전용
+          if (isIOS) {
+            url = `http://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
+          } else {
+            // Android에서는 구글맵으로 대체
+            url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+          }
+          break;
+          
+        default:
+          console.error('Unknown navigation app:', app);
+          return;
+      }
+      
+      // 앱 실행 시도
+      if (app === 'google' || (app === 'apple' && !fallbackUrl)) {
+        // 웹 기반 앱은 바로 열기
+        window.open(url, '_blank');
+      } else if (app === 'kakao') {
+        // 카카오맵은 웹 폴백 사용
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.src = url;
+        
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          window.open(fallbackUrl, '_blank');
+        }, 1500);
+      } else {
+        // 기타 앱들은 URL 스킴 시도 후 실패시 스토어로
+        const startTime = Date.now();
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        iframe.src = url;
+        
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          // 3초 이내에 앱이 열리지 않으면 스토어로 이동
+          if (Date.now() - startTime < 3000 && fallbackUrl) {
+            window.open(fallbackUrl, '_blank');
+          }
+        }, 2500);
+      }
+    }
+    
+    // 전역으로 노출
+    window.openNav = openNav;
+
+    // 애플리케이션 초기화 및 주요 기능
+    class CheongJuInspectionMap {
+      constructor() {
+        this.map = null;
+        this.dataLayer = null;
+        this.routeLayer = null;
+        this.markers = new Map();
+        this.selectedMarkers = new Set();
+        this.data = [];
+        this.filteredData = [];
+        this.currentRoute = [];
+        
+        this.init();
+      }
+
+      async init() {
+        this.initializeOnlineStatus();
+        this.initializeMap();
+        this.bindEventListeners();
+        this.updateUI();
+        
+        // 접근성 개선
+        this.setupKeyboardNavigation();
+        
+        console.log('CLUSTRO 청주 금연구역 점검지도 v14.0 초기화 완료');
+      }
+
+      initializeOnlineStatus() {
+        const updateStatus = () => {
+          const statusElement = document.getElementById('onlineStatus');
+          const statusText = document.getElementById('statusText');
+          
+          if (navigator.onLine) {
+            statusElement.className = 'online-status online';
+            statusText.textContent = '온라인 ✅';
+            
+            // 3초 후 자동 숨김
+            setTimeout(() => {
+              statusElement.style.opacity = '0.3';
+            }, 3000);
+          } else {
+            statusElement.className = 'online-status offline';
+            statusText.textContent = '오프라인 ⚠️';
+            statusElement.style.opacity = '1';
+          }
+        };
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+      }
+
+      initializeMap() {
+        // 한국 영역 제한
+        const KOREA_BOUNDS = L.latLngBounds([33.0, 124.0], [39.6, 132.5]);
+        
+        this.map = L.map('map', {
+          zoomControl: true,
+          zoomSnap: 0.1,
+          zoomDelta: 0.1,
+          preferCanvas: true,
+          maxBounds: KOREA_BOUNDS,
+          maxBoundsViscosity: 0.8,
+          attributionControl: false
+        }).setView([36.635, 127.491], 12);
+
+        // 레이어 초기화
+        this.dataLayer = L.layerGroup().addTo(this.map);
+        this.routeLayer = L.layerGroup().addTo(this.map);
+
+        // 스케일 컨트롤
+        L.control.scale({ 
+          imperial: false,
+          position: 'bottomleft'
+        }).addTo(this.map);
+
+        // 기본 배경지도 설정
+        this.setBaseMap('vworld_base');
+
+        // 지도 이벤트
+        this.map.on('zoom', () => {
+          const zoom = this.map.getZoom().toFixed(1);
+          document.getElementById('zoomSlider').value = zoom;
+          document.getElementById('zoomDisplay').textContent = zoom;
+        });
+
+        console.log('지도 초기화 완료');
+      }
+
+      setBaseMap(type) {
+        if (this.baseLayer) {
+          this.map.removeLayer(this.baseLayer);
+        }
+
+        const baseMaps = {
+          'osm': {
+            url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            options: {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap contributors'
+            }
+          },
+          'vworld_gray': {
+            url: 'https://xdworld.vworld.kr/2d/gray/202002/service/{z}/{x}/{y}.png',
+            options: {
+              maxZoom: 19,
+              attribution: '© VWorld'
+            }
+          },
+          'vworld_base': {
+            url: 'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
+            options: {
+              maxZoom: 19,
+              attribution: '© VWorld'
+            }
+          }
+        };
+
+        if (type === 'auto') {
+          // 자동 선택 로직
+          type = navigator.onLine ? 'vworld_base' : 'osm';
+        }
+
+        if (type !== 'none' && baseMaps[type]) {
+          this.baseLayer = L.tileLayer(baseMaps[type].url, baseMaps[type].options);
+          this.baseLayer.addTo(this.map);
+        }
+      }
+
+      setupPanelDragResize() {
+        const panel = document.getElementById('selectionPanel');
+        if (!panel) return;
+        
+        const header = panel.querySelector('.panel-header');
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY, startLeft, startTop, startWidth, startHeight;
+        let resizeDirection = '';
+        
+        // 드래그 기능
+        header.addEventListener('mousedown', (e) => {
+          if (e.target.tagName === 'BUTTON') return;
+          isDragging = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          const rect = panel.getBoundingClientRect();
+          startLeft = rect.left;
+          startTop = rect.top;
+          panel.style.cursor = 'move';
+          e.preventDefault();
+        });
+        
+        // 리사이즈 기능
+        const edges = {
+          'e-left': 'left',
+          'e-right': 'right',
+          'e-top': 'top',
+          'e-bottom': 'bottom'
+        };
+        
+        Object.entries(edges).forEach(([className, direction]) => {
+          const edge = panel.querySelector(`.${className}`);
+          if (!edge) return;
+          
+          edge.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizeDirection = direction;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = panel.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            startWidth = rect.width;
+            startHeight = rect.height;
+            e.preventDefault();
+          });
+        });
+        
+        // 마우스 이동 처리
+        document.addEventListener('mousemove', (e) => {
+          if (isDragging) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            panel.style.left = `${startLeft + dx}px`;
+            panel.style.top = `${startTop + dy}px`;
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+          } else if (isResizing) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            switch(resizeDirection) {
+              case 'right':
+                panel.style.width = `${Math.max(400, startWidth + dx)}px`;
+                break;
+              case 'left':
+                const newWidth = Math.max(400, startWidth - dx);
+                panel.style.width = `${newWidth}px`;
+                panel.style.left = `${startLeft + dx}px`;
+                break;
+              case 'bottom':
+                panel.style.height = `${Math.max(300, startHeight + dy)}px`;
+                break;
+              case 'top':
+                const newHeight = Math.max(300, startHeight - dy);
+                panel.style.height = `${newHeight}px`;
+                panel.style.top = `${startTop + dy}px`;
+                break;
+            }
+          }
+        });
+        
+        // 마우스 업 처리
+        document.addEventListener('mouseup', () => {
+          isDragging = false;
+          isResizing = false;
+          panel.style.cursor = '';
+        });
+        
+        // 헤더 더블클릭으로 초기 위치로 복귀
+        header.addEventListener('dblclick', () => {
+          panel.style.right = '20px';
+          panel.style.bottom = '20px';
+          panel.style.left = 'auto';
+          panel.style.top = 'auto';
+          panel.style.width = '';
+          panel.style.height = '';
+        });
+      }
+
+      bindEventListeners() {
+        this.setupPanelDragResize();
+        
+        // 네비게이션 버튼
+        document.querySelectorAll('.nav-button').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const section = e.currentTarget.dataset.section;
+            this.showSection(section);
+          });
+        });
+
+        // 사이드바 토글
+        document.getElementById('toggleSidebar').addEventListener('click', () => {
+          const sidebar = document.getElementById('sidebar');
+          sidebar.classList.toggle('open');
+        });
+
+        // 섹션 헤더 토글
+        document.querySelectorAll('.section-header').forEach(header => {
+          header.addEventListener('click', () => {
+            const section = header.parentElement;
+            const content = section.querySelector('.section-content');
+            const isOpen = content.style.display !== 'none';
+            
+            content.style.display = isOpen ? 'none' : 'block';
+            header.querySelector('svg').style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
+          });
+        });
+
+        // 파일 업로드
+        document.getElementById('dataFile').addEventListener('change', (e) => {
+          this.loadExcelFile(e.target.files[0]);
+        });
+
+        // 지도 컨트롤
+        document.getElementById('baseMap').addEventListener('change', (e) => {
+          this.setBaseMap(e.target.value);
+        });
+
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+          this.map.setZoom(parseFloat(e.target.value));
+        });
+
+        document.getElementById('labelSource').addEventListener('change', () => {
+          this.updateMarkers();
+        });
+
+        document.getElementById('markerStyle').addEventListener('change', () => {
+          this.updateMarkers();
+        });
+
+        document.getElementById('markerSize').addEventListener('change', (e) => {
+          document.documentElement.style.setProperty('--marker-size', e.target.value + 'px');
+          this.updateMarkers();
+        });
+
+        // 필터 이벤트
+        document.getElementById('searchInput').addEventListener('input', () => {
+          this.applyFilters();
+        });
+
+        document.getElementById('clearSearch').addEventListener('click', () => {
+          document.getElementById('searchInput').value = '';
+          this.applyFilters();
+        });
+
+        document.getElementById('includeNoCoords').addEventListener('change', () => {
+          this.applyFilters();
+        });
+
+        document.getElementById('onlyUninspected').addEventListener('change', () => {
+          this.applyFilters();
+        });
+
+        // 선택 패널
+        document.getElementById('showSelectionPanel').addEventListener('click', () => {
+          document.getElementById('selectionPanel').style.display = 'block';
+        });
+
+        document.getElementById('closePanel').addEventListener('click', () => {
+          document.getElementById('selectionPanel').style.display = 'none';
+        });
+
+        document.getElementById('clearSelected').addEventListener('click', () => {
+          this.clearSelection();
+        });
+
+        // 경로 계산
+        document.getElementById('calculateRoute').addEventListener('click', () => {
+          this.calculateRoute();
+        });
+
+        document.getElementById('clearRoute').addEventListener('click', () => {
+          this.clearRoute();
+        });
+
+        // 내보내기
+        document.getElementById('exportSelected').addEventListener('click', () => {
+          this.exportSelection();
+        });
+
+        document.getElementById('exportExcel').addEventListener('click', () => {
+          this.exportToExcel();
+        });
+
+        document.getElementById('exportPDF').addEventListener('click', () => {
+          this.exportToPDF();
+        });
+
+        document.getElementById('exportImage').addEventListener('click', () => {
+          this.exportToImage();
+        });
+
+        // 지도 컨트롤 버튼
+        document.getElementById('fitToMarkers').addEventListener('click', () => {
+          this.fitToMarkers();
+        });
+
+        document.getElementById('refreshMap').addEventListener('click', () => {
+          this.refreshMap();
+        });
+
+        // 다크모드 토글
+        document.getElementById('darkToggle').addEventListener('change', (e) => {
+          document.body.classList.toggle('auto-dark', e.target.checked);
+        });
+      }
+
+      showSection(sectionName) {
+        // 네비게이션 버튼 활성화
+        document.querySelectorAll('.nav-button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.section === sectionName);
+        });
+
+        // 섹션 표시
+        document.querySelectorAll('.section').forEach(section => {
+          const isTarget = section.dataset.section === sectionName;
+          section.style.display = isTarget ? 'block' : 'none';
+        });
+      }
+
+      async loadExcelFile(file) {
+        if (!file) return;
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          
+          let worksheet;
+          if (workbook.SheetNames.includes('2025DATA')) {
+            worksheet = workbook.Sheets['2025DATA'];
+          } else {
+            // 시트 선택 UI 표시
+            const sheetSelect = document.getElementById('sheetSelect');
+            sheetSelect.innerHTML = workbook.SheetNames.map(name => 
+              `<option value="${name}">${name}</option>`
+            ).join('');
+            return;
+          }
+
+          this.parseWorksheet(worksheet);
+        } catch (error) {
+          console.error('Excel 파일 로드 실패:', error);
+          alert('Excel 파일을 읽는데 실패했습니다.');
+        }
+      }
+
+      parseWorksheet(worksheet) {
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        
+        this.data = [];
+        
+        // 헤더를 제외하고 데이터 파싱
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.length === 0) continue;
+
+          const item = {
+            id: row[2] || i, // C열: 고유번호
+            addr: row[1] || '', // B열: 구분주소  
+            category: row[4] || '기타', // E열: 카테고리
+            name: row[6] || '', // G열: 시설명
+            district: row[7] || '', // H열: 읍면동
+            inspectionDate: row[9] || '', // J열: 점검일
+            lat: parseFloat(String(row[17]).replace(/,/g, '')) || null, // R열: 위도
+            lng: parseFloat(String(row[18]).replace(/,/g, '')) || null, // S열: 경도
+            cluster: row[20] || '' // U열: 군집
+          };
+
+          // 좌표 유효성 검사
+          if (item.lat === 0) item.lat = null;
+          if (item.lng === 0) item.lng = null;
+          if (!isFinite(item.lat)) item.lat = null;
+          if (!isFinite(item.lng)) item.lng = null;
+
+          this.data.push(item);
+        }
+
+        console.log(`${this.data.length}개 데이터 로드 완료`);
+        
+        this.buildFilterChips();
+        this.applyFilters();
+        this.updateUI();
+      }
+
+      buildFilterChips() {
+        // 군집 필터 칩
+        const clusters = [...new Set(this.data.map(item => item.cluster).filter(Boolean))].sort();
+        const clusterChips = document.getElementById('clusterChips');
+        clusterChips.innerHTML = clusters.map(cluster => 
+          `<label class="chip">
+            <input type="checkbox" value="${cluster}" checked> ${cluster}
+          </label>`
+        ).join('');
+
+        // 읍면동 필터 칩
+        const districts = [...new Set(this.data.map(item => item.district).filter(Boolean))].sort();
+        const districtChips = document.getElementById('districtChips');
+        districtChips.innerHTML = districts.map(district => 
+          `<label class="chip">
+            <input type="checkbox" value="${district}" checked> ${district}
+          </label>`
+        ).join('');
+
+        // 카테고리 필터 칩
+        const categories = [...new Set(this.data.map(item => item.category).filter(Boolean))].sort();
+        const categoryChips = document.getElementById('categoryChips');
+        categoryChips.innerHTML = categories.map(category => 
+          `<label class="chip">
+            <input type="checkbox" value="${category}" checked> ${category}
+          </label>`
+        ).join('');
+
+        // 필터 체크박스 이벤트 연결
+        [clusterChips, districtChips, categoryChips].forEach(container => {
+          container.addEventListener('change', () => this.applyFilters());
+        });
+
+        // 전체 토글 이벤트
+        ['cluster', 'district', 'category'].forEach(type => {
+          document.getElementById(`${type}Toggle`).addEventListener('change', (e) => {
+            const chips = document.getElementById(`${type}Chips`);
+            chips.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+              cb.checked = e.target.checked;
+            });
+            this.applyFilters();
+          });
+        });
+      }
+
+      applyFilters() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        const includeNoCoords = document.getElementById('includeNoCoords').checked;
+        const onlyUninspected = document.getElementById('onlyUninspected').checked;
+
+        // 선택된 필터 값들
+        const selectedClusters = new Set(
+          Array.from(document.querySelectorAll('#clusterChips input:checked'))
+            .map(cb => cb.value)
+        );
+        
+        const selectedDistricts = new Set(
+          Array.from(document.querySelectorAll('#districtChips input:checked'))
+            .map(cb => cb.value)
+        );
+        
+        const selectedCategories = new Set(
+          Array.from(document.querySelectorAll('#categoryChips input:checked'))
+            .map(cb => cb.value)
+        );
+
+        this.filteredData = this.data.filter(item => {
+          // 검색어 필터
+          if (searchTerm) {
+            const searchableText = `${item.name} ${item.addr} ${item.district} ${item.cluster}`.toLowerCase();
+            if (!searchableText.includes(searchTerm)) return false;
+          }
+
+          // 좌표 필터
+          if (!includeNoCoords && (!item.lat || !item.lng)) return false;
+
+          // 미점검 필터
+          if (onlyUninspected && item.inspectionDate && item.inspectionDate.trim()) return false;
+
+          // 군집 필터
+          if (selectedClusters.size > 0 && !selectedClusters.has(item.cluster)) return false;
+
+          // 읍면동 필터
+          if (selectedDistricts.size > 0 && !selectedDistricts.has(item.district)) return false;
+
+          // 카테고리 필터
+          if (selectedCategories.size > 0 && !selectedCategories.has(item.category)) return false;
+
+          return true;
+        });
+
+        console.log(`필터 적용: ${this.filteredData.length}/${this.data.length}개 항목`);
+        this.updateMarkers();
+        this.updateUI();
+      }
+
+      updateMarkers() {
+        this.dataLayer.clearLayers();
+        this.markers.clear();
+
+        const labelSource = document.getElementById('labelSource').value;
+        const markerStyle = document.getElementById('markerStyle').value;
+        const showLabels = document.getElementById('showLabels').checked;
+
+        this.filteredData.forEach(item => {
+          if (!item.lat || !item.lng) return;
+
+          const label = this.getItemLabel(item, labelSource);
+          const markerHtml = this.createMarkerHtml(label, item.category, markerStyle);
+          
+          const marker = L.marker([item.lat, item.lng], {
+            icon: L.divIcon({
+              html: markerHtml,
+              className: 'custom-marker',
+              iconSize: null,
+              iconAnchor: [16, 16]
+            })
+          });
+
+          // 툴팁
+          if (showLabels) {
+            marker.bindTooltip(this.createTooltipContent(item), { 
+              sticky: true,
+              className: 'custom-tooltip'
+            });
+          }
+
+          // 팝업
+          marker.bindPopup(this.createPopupContent(item), {
+            className: 'custom-popup'
+          });
+
+          // 이벤트
+          marker.on('click', () => {
+            this.toggleMarkerSelection(item.id);
+          });
+
+          marker.on('popupopen', (e) => {
+            this.bindPopupEvents(e.popup.getElement(), item);
+          });
+
+          marker.addTo(this.dataLayer);
+          this.markers.set(item.id, marker);
+
+          // 선택된 마커 스타일 적용
+          if (this.selectedMarkers.has(item.id)) {
+            marker.getElement().classList.add('selected');
+          }
+        });
+      }
+
+      getItemLabel(item, source) {
+        switch (source) {
+          case 'name': return item.name || item.id;
+          case 'addr': return item.addr || item.id;
+          default: return item.id;
+        }
+      }
+
+      createMarkerHtml(label, category, style) {
+        const categoryClass = `category-${category.replace(/\s+/g, '')}`;
+        
+        switch (style) {
+          case 'square':
+            return `<div class="marker ${categoryClass}" style="border-radius: 4px;">${label}</div>`;
+          case 'bubble':
+            return `<div class="marker ${categoryClass}" style="border-radius: 12px; position: relative;">
+              ${label}
+              <div style="position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid currentColor;"></div>
+            </div>`;
+          default:
+            return `<div class="marker ${categoryClass}">${label}</div>`;
+        }
+      }
+
+      createTooltipContent(item) {
+        return `<div>
+          <strong>${item.name || item.id}</strong><br>
+          ${item.addr}<br>
+          ${item.district} • ${item.category}
+        </div>`;
+      }
+
+      createPopupContent(item) {
+        const navApps = [
+          {id: 'kakao', name: '카카오', color: '#FEE500', textColor: '#000'},
+          {id: 'naver', name: '네이버', color: '#03C75A', textColor: '#fff'},
+          {id: 'tmap', name: '티맵', color: '#FF0000', textColor: '#fff'},
+          {id: 'google', name: '구글', color: '#4285F4', textColor: '#fff'},
+          {id: 'apple', name: '애플', color: '#000', textColor: '#fff'}
+        ];
+        
+        const navButtons = navApps.map(app => `
+          <button onclick="window.openNav('${app.id}', ${item.lat}, ${item.lng}, '${(item.name || item.id).replace(/'/g, "\\'")}')" 
+                  style="padding: 4px 8px; border-radius: 4px; border: none; background: ${app.color}; color: ${app.textColor}; 
+                         font-size: 11px; font-weight: 600; cursor: pointer; margin: 2px;">
+            ${app.name}
+          </button>
+        `).join('');
+        
+        return `<div style="min-width: 200px; font-size: 13px;">
+          <div style="margin-bottom: 8px;">
+            <strong>${item.name || '시설명 없음'}</strong>
+          </div>
+          <div style="margin-bottom: 4px;"><strong>고유번호:</strong> ${item.id}</div>
+          <div style="margin-bottom: 4px;"><strong>주소:</strong> ${item.addr}</div>
+          <div style="margin-bottom: 4px;"><strong>업종:</strong> ${item.category}</div>
+          <div style="margin-bottom: 4px;"><strong>읍면동:</strong> ${item.district}</div>
+          <div style="margin-bottom: 4px;"><strong>군집:</strong> ${item.cluster}</div>
+          <div style="margin-bottom: 12px;"><strong>점검일:</strong> ${item.inspectionDate || '미점검'}</div>
+          
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 8px; margin-top: 8px;">
+            <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px;">네비게이션 연동:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              ${navButtons}
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button class="btn btn-primary btn-sm" onclick="app.addToSelection('${item.id}')">선택 추가</button>
+            <button class="btn btn-danger btn-sm" onclick="app.removeFromSelection('${item.id}')">선택 제거</button>
+          </div>
+          
+          ${item.lat && item.lng ? `
+          <div style="border-top: 1px solid var(--gray-200); padding-top: 8px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">길찾기:</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+              <button onclick="app.openNavigation('kakao', ${item.lat}, ${item.lng}, '${item.name || item.addr}')" style="background: #FEE500; color: #000; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px;">카카오</button>
+              <button onclick="app.openNavigation('naver', ${item.lat}, ${item.lng}, '${item.name || item.addr}')" style="background: #03C75A; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px;">네이버</button>
+              <button onclick="app.openNavigation('tmap', ${item.lat}, ${item.lng}, '${item.name || item.addr}')" style="background: #FF0000; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px;">티맵</button>
+              <button onclick="app.openNavigation('google', ${item.lat}, ${item.lng}, '${item.name || item.addr}')" style="background: #4285F4; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px;">구글</button>
+            </div>
+          </div>
+          ` : ''}
+        </div>`;
+      }
+
+      bindPopupEvents(popupElement, item) {
+        // 팝업 내 버튼 이벤트는 인라인으로 처리됨
+      }
+
+      toggleMarkerSelection(itemId) {
+        if (this.selectedMarkers.has(itemId)) {
+          this.removeFromSelection(itemId);
+        } else {
+          this.addToSelection(itemId);
+        }
+      }
+
+      addToSelection(itemId) {
+        const item = this.data.find(d => d.id == itemId);
+        if (!item) return;
+
+        this.selectedMarkers.add(itemId);
+        
+        // 마커 스타일 업데이트
+        const marker = this.markers.get(itemId);
+        if (marker) {
+          marker.getElement().classList.add('selected');
+        }
+
+        this.updateSelectionPanel();
+        this.updateUI();
+        
+        // 2개 이상이면 경로 자동 계산
+        if (this.selectedMarkers.size >= 2) {
+          this.calculateRoute();
+        }
+      }
+
+      removeFromSelection(itemId) {
+        this.selectedMarkers.delete(itemId);
+        
+        // 마커 스타일 업데이트
+        const marker = this.markers.get(itemId);
+        if (marker) {
+          marker.getElement().classList.remove('selected');
+        }
+
+        this.updateSelectionPanel();
+        this.updateUI();
+        
+        // 경로 재계산
+        if (this.selectedMarkers.size >= 2) {
+          this.calculateRoute();
+        } else {
+          this.clearRoute();
+        }
+      }
+
+      clearSelection() {
+        this.selectedMarkers.clear();
+        
+        // 모든 마커의 선택 스타일 제거
+        this.markers.forEach(marker => {
+          marker.getElement().classList.remove('selected');
+        });
+
+        this.updateSelectionPanel();
+        this.updateUI();
+        this.clearRoute();
+      }
+
+      updateSelectionPanel() {
+        const tbody = document.getElementById('selectionTableBody');
+        const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id));
+        
+        tbody.innerHTML = selectedItems.map((item, index) => `
+          <tr>
+            <td>${item.id}</td>
+            <td>${item.name}</td>
+            <td>${item.addr}</td>
+            <td>${item.category}</td>
+            <td>${item.cluster}</td>
+            <td><input type="number" value="${index + 1}" min="1" style="width: 60px;" onchange="app.updateOrder('${item.id}', this.value)"></td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="app.removeFromSelection('${item.id}')">삭제</button>
+              ${item.lat && item.lng ? `<button class="btn btn-secondary btn-sm" onclick="app.showNavigationMenu('${item.id}', ${item.lat}, ${item.lng}, '${item.name || item.addr}')">🧭</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+
+        document.getElementById('selectedCount').textContent = `(${selectedItems.length}개)`;
+      }
+
+      updateOrder(itemId, newOrder) {
+        // 순서 변경 로직 구현
+        console.log(`${itemId}의 순서를 ${newOrder}로 변경`);
+        this.calculateRoute();
+      }
+
+      showNavigationMenu(itemId, lat, lng, name) {
+        // 네비게이션 드롭다운 메뉴 표시
+        const existingMenu = document.querySelector('.nav-dropdown');
+        if (existingMenu) existingMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.className = 'nav-dropdown';
+        menu.style.cssText = `
+          position: fixed;
+          background: white;
+          border: 2px solid var(--gray-200);
+          border-radius: 8px;
+          box-shadow: var(--shadow-lg);
+          z-index: 10000;
+          padding: 8px;
+          min-width: 150px;
+        `;
+
+        menu.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 8px; padding: 4px 0; border-bottom: 1px solid var(--gray-200);">길찾기 선택</div>
+          <button onclick="app.openNavigation('kakao', ${lat}, ${lng}, '${name}')" style="display: block; width: 100%; margin: 4px 0; padding: 8px; background: #FEE500; color: #000; border: none; border-radius: 4px; font-size: 12px;">카카오맵</button>
+          <button onclick="app.openNavigation('naver', ${lat}, ${lng}, '${name}')" style="display: block; width: 100%; margin: 4px 0; padding: 8px; background: #03C75A; color: white; border: none; border-radius: 4px; font-size: 12px;">네이버지도</button>
+          <button onclick="app.openNavigation('tmap', ${lat}, ${lng}, '${name}')" style="display: block; width: 100%; margin: 4px 0; padding: 8px; background: #FF0000; color: white; border: none; border-radius: 4px; font-size: 12px;">티맵</button>
+          <button onclick="app.openNavigation('google', ${lat}, ${lng}, '${name}')" style="display: block; width: 100%; margin: 4px 0; padding: 8px; background: #4285F4; color: white; border: none; border-radius: 4px; font-size: 12px;">구글지도</button>
+        `;
+
+        document.body.appendChild(menu);
+
+        // 마우스 위치에 메뉴 표시
+        const rect = event.target.getBoundingClientRect();
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 5) + 'px';
+
+        // 외부 클릭시 메뉴 닫기
+        const closeMenu = (e) => {
+          if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 100);
+      }
+
+      openNavigation(app, lat, lng, name) {
+        const encodedName = encodeURIComponent(name);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /android/i.test(navigator.userAgent);
+
+        let url = '';
+        let fallbackUrl = '';
+
+        switch (app) {
+          case 'kakao':
+            url = `kakaomap://route?ep=${lat},${lng}&by=car`;
+            fallbackUrl = `http://m.map.kakao.com/route?ep=${lat},${lng}&by=car`;
+            break;
+          case 'naver':
+            url = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${encodedName}`;
+            fallbackUrl = isIOS ? 
+              'https://apps.apple.com/kr/app/naver-map/id311867728' : 
+              'https://play.google.com/store/apps/details?id=com.nhn.android.nmap';
+            break;
+          case 'tmap':
+            url = isIOS ? 
+              `tmap://route?rGoName=${encodedName}&rGoX=${lng}&rGoY=${lat}` :
+              `tmap://route?goalx=${lng}&goaly=${lat}&goalname=${encodedName}`;
+            fallbackUrl = isIOS ?
+              'https://apps.apple.com/kr/app/tmap/id431589174' :
+              'https://play.google.com/store/apps/details?id=com.skt.tmap.ku';
+            break;
+          case 'google':
+            url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+            break;
+        }
+
+        // 네비게이션 앱 실행
+        if (app === 'google') {
+          window.open(url, '_blank');
+        } else {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          document.body.appendChild(iframe);
+          iframe.src = url;
+
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            if (fallbackUrl && app !== 'kakao') {
+              window.open(fallbackUrl, '_blank');
+            } else if (app === 'kakao') {
+              window.open(fallbackUrl, '_blank');
+            }
+          }, 1500);
+        }
+
+        // 드롭다운 메뉴 닫기
+        const dropdown = document.querySelector('.nav-dropdown');
+        if (dropdown) dropdown.remove();
+      }
+
+      async calculateRoute() {
+        if (this.selectedMarkers.size < 2) return;
+
+        const button = document.getElementById('calculateRoute');
+        const spinner = document.getElementById('routeSpinner');
+        
+        button.disabled = true;
+        spinner.style.display = 'inline-block';
+
+        try {
+          const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id));
+          const algorithm = document.getElementById('routeAlgorithm').value;
+          
+          let orderedPoints;
+          switch (algorithm) {
+            case 'tsp':
+              orderedPoints = await this.solveTSP(selectedItems);
+              break;
+            case 'cluster':
+              orderedPoints = await this.clusterBasedRoute(selectedItems);
+              break;
+            default:
+              orderedPoints = this.nearestNeighborRoute(selectedItems);
+          }
+
+          this.currentRoute = orderedPoints;
+          this.drawRoute(orderedPoints);
+          this.showRouteStats(orderedPoints);
+
+        } catch (error) {
+          console.error('경로 계산 실패:', error);
+          alert('경로 계산에 실패했습니다.');
+        } finally {
+          button.disabled = false;
+          spinner.style.display = 'none';
+        }
+      }
+
+      nearestNeighborRoute(points) {
+        if (points.length < 2) return points;
+
+        const unvisited = [...points];
+        const route = [unvisited.shift()];
+
+        while (unvisited.length > 0) {
+          const current = route[route.length - 1];
+          let nearest = unvisited[0];
+          let minDistance = this.calculateDistance(current, nearest);
+
+          for (let i = 1; i < unvisited.length; i++) {
+            const distance = this.calculateDistance(current, unvisited[i]);
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearest = unvisited[i];
+            }
+          }
+
+          route.push(nearest);
+          unvisited.splice(unvisited.indexOf(nearest), 1);
+        }
+
+        return route;
+      }
+
+      async solveTSP(points) {
+        // 간단한 2-opt 최적화
+        let route = this.nearestNeighborRoute(points);
+        let improved = true;
+
+        while (improved) {
+          improved = false;
+          for (let i = 0; i < route.length - 1; i++) {
+            for (let j = i + 2; j < route.length; j++) {
+              const oldDistance = 
+                this.calculateDistance(route[i], route[i + 1]) +
+                this.calculateDistance(route[j], route[(j + 1) % route.length]);
+              
+              const newDistance = 
+                this.calculateDistance(route[i], route[j]) +
+                this.calculateDistance(route[i + 1], route[(j + 1) % route.length]);
+
+              if (newDistance < oldDistance) {
+                // 2-opt swap
+                const newRoute = route.slice(0, i + 1)
+                  .concat(route.slice(i + 1, j + 1).reverse())
+                  .concat(route.slice(j + 1));
+                route = newRoute;
+                improved = true;
+              }
+            }
+          }
+        }
+
+        return route;
+      }
+
+      async clusterBasedRoute(points) {
+        // 지리적 클러스터링 기반 경로
+        const clusters = this.clusterPoints(points, 5); // 5개 클러스터
+        const clusterCenters = clusters.map(cluster => this.getClusterCenter(cluster));
+        const orderedCenters = this.nearestNeighborRoute(clusterCenters);
+        
+        let route = [];
+        for (const center of orderedCenters) {
+          const cluster = clusters.find(c => this.getClusterCenter(c) === center);
+          route = route.concat(this.nearestNeighborRoute(cluster));
+        }
+
+        return route;
+      }
+
+      clusterPoints(points, k) {
+        // K-means 클러스터링 구현
+        if (points.length <= k) return points.map(p => [p]);
+
+        // 초기 중심점 선택
+        let centroids = [];
+        for (let i = 0; i < k; i++) {
+          centroids.push(points[Math.floor(i * points.length / k)]);
+        }
+
+        let clusters = [];
+        let prevCentroids = [];
+
+        while (!this.centroidsEqual(centroids, prevCentroids)) {
+          prevCentroids = [...centroids];
+          clusters = Array(k).fill().map(() => []);
+
+          // 각 점을 가장 가까운 중심점에 할당
+          for (const point of points) {
+            let minDistance = Infinity;
+            let clusterIndex = 0;
+
+            for (let i = 0; i < centroids.length; i++) {
+              const distance = this.calculateDistance(point, centroids[i]);
+              if (distance < minDistance) {
+                minDistance = distance;
+                clusterIndex = i;
+              }
+            }
+
+            clusters[clusterIndex].push(point);
+          }
+
+          // 새로운 중심점 계산
+          centroids = clusters.map(cluster => this.getClusterCenter(cluster));
+        }
+
+        return clusters.filter(cluster => cluster.length > 0);
+      }
+
+      getClusterCenter(cluster) {
+        if (cluster.length === 0) return null;
+        
+        const avgLat = cluster.reduce((sum, p) => sum + p.lat, 0) / cluster.length;
+        const avgLng = cluster.reduce((sum, p) => sum + p.lng, 0) / cluster.length;
+        
+        return cluster.reduce((closest, point) => {
+          const distToCurrent = this.calculateDistance(point, { lat: avgLat, lng: avgLng });
+          const distToClosest = this.calculateDistance(closest, { lat: avgLat, lng: avgLng });
+          return distToCurrent < distToClosest ? point : closest;
+        });
+      }
+
+      centroidsEqual(c1, c2) {
+        if (c1.length !== c2.length) return false;
+        for (let i = 0; i < c1.length; i++) {
+          if (!c1[i] || !c2[i]) return false;
+          if (Math.abs(c1[i].lat - c2[i].lat) > 0.001 || 
+              Math.abs(c1[i].lng - c2[i].lng) > 0.001) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      calculateDistance(p1, p2) {
+        // 하버사인 공식
+        const R = 6371; // 지구 반경 (km)
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLng = (p2.lng - p1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) *
+                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      drawRoute(points) {
+        this.routeLayer.clearLayers();
+        
+        if (points.length < 2) return;
+
+        // 경로 라인 그리기
+        const latlngs = points.map(p => [p.lat, p.lng]);
+        const routeLine = L.polyline(latlngs, {
+          color: '#2563EB',
+          weight: 4,
+          opacity: 0.8,
+          dashArray: '10, 5'
+        });
+
+        routeLine.addTo(this.routeLayer);
+
+        // 시작점과 끝점 마커
+        const startIcon = L.divIcon({
+          html: '<div style="background: #10B981; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">S</div>',
+          className: 'route-marker',
+          iconSize: [24, 24]
+        });
+
+        const endIcon = L.divIcon({
+          html: '<div style="background: #EF4444; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">E</div>',
+          className: 'route-marker',
+          iconSize: [24, 24]
+        });
+
+        L.marker([points[0].lat, points[0].lng], { icon: startIcon }).addTo(this.routeLayer);
+        L.marker([points[points.length - 1].lat, points[points.length - 1].lng], { icon: endIcon }).addTo(this.routeLayer);
+      }
+
+      showRouteStats(points) {
+        if (points.length < 2) return;
+
+        let totalDistance = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+          totalDistance += this.calculateDistance(points[i], points[i + 1]);
+        }
+
+        const estimatedTime = (totalDistance / 40) * 60; // 40km/h 가정, 분 단위
+
+        document.getElementById('totalDistance').textContent = `${totalDistance.toFixed(1)}km`;
+        document.getElementById('estimatedTime').textContent = `${Math.round(estimatedTime)}분`;
+        document.getElementById('waypointCount').textContent = `${points.length}개`;
+        document.getElementById('routeStats').style.display = 'block';
+      }
+
+      clearRoute() {
+        this.routeLayer.clearLayers();
+        this.currentRoute = [];
+        document.getElementById('routeStats').style.display = 'none';
+      }
+
+      fitToMarkers() {
+        if (this.filteredData.length === 0) return;
+
+        const validPoints = this.filteredData.filter(item => item.lat && item.lng);
+        if (validPoints.length === 0) return;
+
+        const bounds = L.latLngBounds(validPoints.map(item => [item.lat, item.lng]));
+        this.map.fitBounds(bounds, { padding: [20, 20] });
+      }
+
+      refreshMap() {
+        this.applyFilters();
+        this.updateMarkers();
+      }
+
+      updateUI() {
+        // 카운트 업데이트
+        const totalCount = this.data.length;
+        const shownCount = this.filteredData.filter(item => item.lat && item.lng).length;
+        const missingCount = this.data.filter(item => !item.lat || !item.lng).length;
+        const filteredCount = totalCount - this.filteredData.length;
+
+        document.getElementById('totalCount').textContent = `총: ${totalCount}`;
+        document.getElementById('shownCount').textContent = `표시: ${shownCount}`;
+        document.getElementById('missingCount').textContent = `좌표없음: ${missingCount}`;
+        document.getElementById('filteredCount').textContent = `제외: ${filteredCount}`;
+
+        // 선택 버튼 업데이트
+        document.getElementById('showSelectionPanel').innerHTML = 
+          `📋 선택 목록 (${this.selectedMarkers.size})`;
+      }
+
+      setupKeyboardNavigation() {
+        document.addEventListener('keydown', (e) => {
+          // Escape: 팝업 닫기
+          if (e.key === 'Escape') {
+            this.map.closePopup();
+            const panel = document.getElementById('selectionPanel');
+            if (panel.style.display === 'block') {
+              panel.style.display = 'none';
+            }
+          }
+
+          // Ctrl+A: 전체 선택
+          if (e.ctrlKey && e.key === 'a') {
+            e.preventDefault();
+            this.selectAll();
+          }
+
+          // Ctrl+D: 선택 해제
+          if (e.ctrlKey && e.key === 'd') {
+            e.preventDefault();
+            this.clearSelection();
+          }
+
+          // F: 지도 맞춤
+          if (e.key === 'f' || e.key === 'F') {
+            this.fitToMarkers();
+          }
+        });
+      }
+
+      selectAll() {
+        const validItems = this.filteredData.filter(item => item.lat && item.lng);
+        const dailyLimit = parseInt(document.getElementById('dailyLimit').value) || 50;
+        
+        // 일일 한도만큼만 선택
+        const itemsToSelect = validItems.slice(0, dailyLimit);
+        
+        this.clearSelection();
+        itemsToSelect.forEach(item => {
+          this.selectedMarkers.add(item.id);
+          const marker = this.markers.get(item.id);
+          if (marker) {
+            marker.getElement().classList.add('selected');
+          }
+        });
+
+        this.updateSelectionPanel();
+        this.updateUI();
+        
+        if (this.selectedMarkers.size >= 2) {
+          this.calculateRoute();
+        }
+      }
+
+      // 내보내기 기능들
+      exportSelection() {
+        if (this.selectedMarkers.size === 0) {
+          alert('선택된 항목이 없습니다.');
+          return;
+        }
+
+        const selectedItems = this.data.filter(item => this.selectedMarkers.has(item.id));
+        this.exportToExcel(selectedItems);
+      }
+
+      exportToExcel(data = null) {
+        const exportData = data || this.filteredData;
+        
+        if (exportData.length === 0) {
+          alert('내보낼 데이터가 없습니다.');
+          return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData.map((item, index) => ({
+          '순번': index + 1,
+          '고유번호': item.id,
+          '시설명': item.name,
+          '주소': item.addr,
+          '업종': item.category,
+          '읍면동': item.district,
+          '군집': item.cluster,
+          '점검일': item.inspectionDate,
+          '위도': item.lat,
+          '경도': item.lng,
+          '경로순서': this.currentRoute.findIndex(r => r.id === item.id) + 1 || ''
+        })));
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, '점검대상지');
+
+        const filename = `청주_금연구역_점검대상지_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, filename);
+      }
+
+      async exportToPDF() {
+        try {
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('l', 'mm', 'a4'); // 가로 방향
+          
+          // 지도 캡처
+          const mapElement = document.getElementById('map');
+          const canvas = await html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 2
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          const imgWidth = 277; // A4 가로 크기 (mm)
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+          
+          // 메타데이터 추가
+          pdf.setFontSize(12);
+          pdf.text(`청주시 금연구역 점검지도`, 10, imgHeight + 25);
+          pdf.text(`생성일: ${new Date().toLocaleDateString()}`, 10, imgHeight + 35);
+          pdf.text(`총 ${this.filteredData.length}개 지점 표시`, 10, imgHeight + 45);
+          
+          const filename = `청주_금연구역_지도_${new Date().toISOString().slice(0, 10)}.pdf`;
+          pdf.save(filename);
+        } catch (error) {
+          console.error('PDF 내보내기 실패:', error);
+          alert('PDF 내보내기에 실패했습니다.');
+        }
+      }
+
+      async exportToImage() {
+        try {
+          const mapElement = document.getElementById('map');
+          const canvas = await html2canvas(mapElement, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 2
+          });
+          
+          // 다운로드 링크 생성
+          const link = document.createElement('a');
+          link.download = `청주_금연구역_지도_${new Date().toISOString().slice(0, 10)}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } catch (error) {
+          console.error('이미지 내보내기 실패:', error);
+          alert('이미지 내보내기에 실패했습니다.');
+        }
+      }
+    }
+
+    // 애플리케이션 인스턴스 생성 및 전역 노출
+    let app;
+    document.addEventListener('DOMContentLoaded', () => {
+      app = new CheongJuInspectionMap();
+      window.app = app; // 전역 접근을 위해
+    });
+  </script>
+</body>
+</html>
